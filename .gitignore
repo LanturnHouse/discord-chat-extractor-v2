@@ -1,0 +1,12 @@
+node_modules/
+dist/
+dist-*/
+*.zip
+*.log
+.vite/
+coverage/
+.DS_Store
+.e2e/profile-*/
+.e2e/downloads/
+.e2e/out/
+.claude/

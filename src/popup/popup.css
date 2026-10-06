@@ -1,0 +1,923 @@
+/*
+ * The toolbar popup: 380px wide, at most 600px tall (docs/PLAN.md §7.2). The shell sizes itself to its content up to that
+ * height; the list (and the scrolling area of every sub screen) takes what is left and scrolls. Colours are the tokens of
+ * ui/theme/theme.css, controls come from ui/components/components.css and the settings panel from ui/settings/settings.css.
+ */
+
+html {
+  overflow: hidden;
+}
+
+body {
+  width: 380px;
+  overflow: hidden;
+}
+
+.dce-popup {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: 600px;
+  background: var(--dce-bg-primary);
+  /* Korean wraps between words, never inside them; names without spaces may still break as a last resort. */
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+
+.dce-popup--loading {
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 160px;
+  color: var(--dce-text-muted);
+}
+
+.dce-view {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  max-height: 600px;
+}
+
+.dce-view__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.dce-pad {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 12px;
+}
+
+/* Only the inline message of a list screen lives here: no space at all while there is none. */
+.dce-pad--tight {
+  padding: 8px 12px 0;
+}
+
+.dce-pad--tight:empty {
+  display: none;
+}
+
+.dce-view__note {
+  color: var(--dce-text-muted);
+  font-size: 12px;
+}
+
+/* --- main header ---------------------------------------------------------------------------------------------------- */
+
+.dce-header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--dce-border);
+}
+
+.dce-avatar {
+  flex: none;
+  border-radius: 50%;
+  background: var(--dce-bg-tertiary);
+  object-fit: cover;
+}
+
+.dce-avatar--fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--dce-brand);
+  color: var(--dce-on-brand);
+  font-weight: 700;
+}
+
+.dce-header__who {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.dce-header__who[data-stale] {
+  opacity: 0.7;
+}
+
+.dce-header__name,
+.dce-header__user {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dce-header__name {
+  color: var(--dce-text-strong);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.dce-header__user {
+  color: var(--dce-text-muted);
+  font-size: 12px;
+}
+
+.dce-header__actions {
+  display: flex;
+  flex: none;
+  gap: 2px;
+}
+
+/* --- main: banners, the switch, the list ------------------------------------------------------------------------------ */
+
+.dce-main__top {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 12px;
+}
+
+.dce-main__top:empty {
+  display: none;
+}
+
+.dce-main__list {
+  flex: 1 1 auto;
+  min-height: 112px;
+  overflow-y: auto;
+  border-top: 1px solid var(--dce-border);
+}
+
+.dce-main__list:focus {
+  outline: none;
+}
+
+.dce-banners {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dce-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border-left: 3px solid var(--dce-link);
+  border-radius: var(--dce-radius-md);
+  background: var(--dce-bg-secondary);
+  font-size: 12px;
+}
+
+.dce-banner--warning {
+  border-left-color: var(--dce-warning);
+}
+
+.dce-banner--error {
+  border-left-color: var(--dce-danger);
+}
+
+.dce-banner--success {
+  border-left-color: var(--dce-success);
+}
+
+.dce-banner__icon {
+  display: inline-flex;
+  flex: none;
+  margin-top: 1px;
+  color: var(--dce-link);
+  font-size: 16px;
+}
+
+.dce-banner--warning .dce-banner__icon {
+  color: var(--dce-warning);
+}
+
+.dce-banner--error .dce-banner__icon {
+  color: var(--dce-text-danger);
+}
+
+.dce-banner--success .dce-banner__icon {
+  color: var(--dce-success);
+}
+
+.dce-banner__text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.dce-banner__detail {
+  color: var(--dce-text-muted);
+}
+
+.dce-banner > .dce-button,
+.dce-banner > .dce-icon-button {
+  align-self: center;
+}
+
+.dce-finished {
+  flex: none;
+  align-items: center;
+  margin: 0 12px 8px;
+}
+
+/* --- download list ---------------------------------------------------------------------------------------------------- */
+
+/*
+ * The list is a tree (docs/PLAN.md §7.2a): nested lists, one level = 16px. Every row and group line takes its indentation from
+ * `--dce-depth` (set inline, 0 = top level); the nested list of an open group carries the vertical guide line, drawn under the
+ * chevron of its group line, so the row backgrounds of the hover state still run the full width.
+ */
+.dce-queue,
+.dce-children {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dce-children {
+  position: relative;
+}
+
+.dce-children::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(12px + (var(--dce-depth, 1) - 1) * 16px + 8px);
+  width: 1px;
+  background: var(--dce-border);
+  pointer-events: none;
+}
+
+.dce-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 8px 8px calc(12px + var(--dce-depth, 0) * 16px);
+  border-bottom: 1px solid var(--dce-border);
+}
+
+.dce-row:hover,
+.dce-row:focus-within {
+  background: var(--dce-bg-hover);
+}
+
+.dce-row__main {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.dce-row__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.dce-row__kind {
+  flex: none;
+  color: var(--dce-icon-muted);
+  font-size: 16px;
+}
+
+.dce-row__avatar {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.dce-row__label {
+  display: flex;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--dce-text-strong);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* A one-line row ("서버 › #채널"): the name of the server (or category) gives way first, the channel name keeps its room. */
+.dce-row__crumb {
+  display: flex;
+  flex: 0 9 auto;
+  min-width: 0;
+}
+
+.dce-row__crumb-name {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+}
+
+.dce-row__crumb-sep {
+  flex: none;
+  color: var(--dce-text-muted);
+  font-weight: 400;
+  white-space: pre;
+}
+
+.dce-row__name {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dce-row__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 6px;
+  color: var(--dce-text-muted);
+  font-size: 12px;
+}
+
+.dce-row__actions {
+  display: flex;
+  flex: none;
+  gap: 0;
+}
+
+.dce-row__progress {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.dce-row__status {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--dce-text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.dce-row__failure {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 6px;
+  margin-top: 2px;
+  font-size: 12px;
+}
+
+.dce-row__failure-icon {
+  flex: none;
+  color: var(--dce-warning);
+  font-size: 14px;
+}
+
+.dce-row__failure[data-failure='failed'] .dce-row__failure-icon {
+  color: var(--dce-text-danger);
+}
+
+.dce-row__failure-text {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+
+/* server and category lines of the tree */
+
+.dce-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 8px 6px calc(12px + var(--dce-depth, 0) * 16px);
+  border-bottom: 1px solid var(--dce-border);
+}
+
+.dce-group:hover,
+.dce-group:focus-within {
+  background: var(--dce-bg-hover);
+}
+
+.dce-group__head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dce-group__main {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 2px 4px 2px 0;
+  border-radius: var(--dce-radius-sm);
+}
+
+.dce-group__main:focus-visible {
+  outline-offset: -2px;
+}
+
+.dce-group__chevron {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: var(--dce-icon-muted);
+  font-size: 16px;
+  transition: transform 0.12s ease;
+}
+
+.dce-group__main[aria-expanded='true'] .dce-group__chevron {
+  transform: rotate(90deg);
+}
+
+.dce-group__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.dce-group__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.dce-group__name {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--dce-text-strong);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* the settings badge, "개별 N" and "미완료 N" go to a second line before they run out of the 380px popup */
+.dce-group__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 6px;
+  min-width: 0;
+  color: var(--dce-text-muted);
+  font-size: 12px;
+}
+
+.dce-group__subtitle {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dce-group__progress {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-left: 20px;
+}
+
+.dce-group > .dce-confirm {
+  margin-left: 20px;
+}
+
+.dce-chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  padding: 0 6px;
+  border-radius: var(--dce-radius-pill);
+  background: var(--dce-bg-active);
+  color: var(--dce-text);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+/* the icon of a server (its picture, or the first letter of its name when there is none or it cannot be loaded) */
+
+.dce-server-icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--dce-bg-tertiary);
+  object-fit: cover;
+}
+
+.dce-server-icon--fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--dce-brand);
+  color: var(--dce-on-brand);
+  font-weight: 700;
+  line-height: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dce-group__chevron {
+    transition: none;
+  }
+}
+
+.dce-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 28px 24px;
+  color: var(--dce-text-muted);
+  text-align: center;
+}
+
+.dce-empty__icon {
+  font-size: 28px;
+  opacity: 0.7;
+}
+
+.dce-empty--plain {
+  padding: 32px 24px;
+}
+
+/* --- footer ------------------------------------------------------------------------------------------------------------ */
+
+.dce-footer {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--dce-border);
+  background: var(--dce-bg-secondary);
+}
+
+.dce-footer__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dce-footer__row .dce-split {
+  flex: 1 1 auto;
+}
+
+.dce-footer--end {
+  flex-flow: row wrap;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.dce-footer--end > .dce-confirm {
+  flex: 1 1 100%;
+}
+
+.dce-footer__revert {
+  margin-right: auto;
+}
+
+.dce-footer--running {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+
+.dce-footer__note {
+  color: var(--dce-text-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.dce-overall {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.dce-overall__text {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--dce-text-muted);
+  font-size: 12px;
+}
+
+.dce-overall__value {
+  color: var(--dce-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.dce-overall__note {
+  color: var(--dce-text-muted);
+  font-size: 11px;
+}
+
+.dce-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--dce-border);
+  border-radius: var(--dce-radius-md);
+  background: var(--dce-bg-primary);
+}
+
+.dce-confirm__text {
+  flex: 1 1 auto;
+  font-weight: 500;
+}
+
+/* a question with reasons (the safety warning before a big download): the question and the list take a whole line each, the buttons follow */
+
+.dce-confirm--detailed > .dce-confirm__text,
+.dce-confirm--detailed > .dce-confirm__details {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+.dce-confirm__details {
+  margin: 0;
+  padding: 0 0 0 18px;
+  color: var(--dce-text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.dce-confirm__details > li + li {
+  margin-top: 2px;
+}
+
+/* --- sub screens ------------------------------------------------------------------------------------------------------- */
+
+.dce-viewheader {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--dce-border);
+}
+
+.dce-viewheader__text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dce-viewheader__title {
+  margin: 0;
+  color: var(--dce-text-strong);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.dce-viewheader__title:focus {
+  outline: none;
+}
+
+.dce-viewheader__subtitle {
+  overflow: hidden;
+  color: var(--dce-text-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dce-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dce-section__title {
+  margin: 0;
+  color: var(--dce-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.dce-section__button {
+  align-self: flex-start;
+}
+
+.dce-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dce-field__label {
+  color: var(--dce-text-strong);
+  font-weight: 500;
+}
+
+.dce-field__input,
+.dce-field__select {
+  width: 100%;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--dce-input-border);
+  border-radius: var(--dce-radius-sm);
+  background: var(--dce-bg-input);
+  color: var(--dce-text);
+  font-size: 13px;
+}
+
+.dce-field__input[aria-invalid='true'] {
+  border-color: var(--dce-danger);
+}
+
+.dce-field__help {
+  color: var(--dce-text-muted);
+  font-size: 12px;
+}
+
+.dce-field__error {
+  color: var(--dce-text-danger);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.dce-shortcut {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dce-shortcut__keys {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--dce-text-muted);
+}
+
+.dce-shortcut kbd {
+  padding: 1px 6px;
+  border: 1px solid var(--dce-border);
+  border-bottom-width: 2px;
+  border-radius: var(--dce-radius-sm);
+  background: var(--dce-bg-secondary);
+  color: var(--dce-text);
+  font: inherit;
+  font-size: 12px;
+}
+
+/* --- history ----------------------------------------------------------------------------------------------------------- */
+
+.dce-history {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dce-history__row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--dce-border);
+}
+
+.dce-history__main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.dce-history__title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dce-history__label {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--dce-text-strong);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dce-history__meta {
+  display: flex;
+  gap: 6px;
+  color: var(--dce-text-muted);
+  font-size: 12px;
+}
+
+.dce-history__summary {
+  color: var(--dce-text-muted);
+  font-size: 12px;
+}
+
+.dce-history__error {
+  color: var(--dce-text-danger);
+  font-size: 12px;
+}
+
+.dce-history__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* --- first-run notice -------------------------------------------------------------------------------------------------- */
+
+.dce-consent__header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dce-consent__title {
+  margin: 0;
+  color: var(--dce-text-strong);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.dce-consent__title:focus {
+  outline: none;
+}
+
+.dce-consent__intro {
+  color: var(--dce-text-muted);
+}
+
+.dce-consent__points {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dce-consent__point {
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--dce-radius-md);
+  background: var(--dce-bg-secondary);
+}
+
+.dce-consent__point[data-tone='warning'] {
+  border-left: 3px solid var(--dce-warning);
+}
+
+.dce-consent__icon {
+  display: inline-flex;
+  flex: none;
+  margin-top: 1px;
+  color: var(--dce-icon);
+  font-size: 18px;
+}
+
+.dce-consent__point[data-tone='warning'] .dce-consent__icon {
+  color: var(--dce-warning);
+}
+
+.dce-consent__point-title {
+  margin: 0 0 2px;
+  color: var(--dce-text-strong);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dce-consent__point-body {
+  font-size: 12.5px;
+}
+
+.dce-consent__when {
+  color: var(--dce-text-muted);
+  font-size: 12px;
+}

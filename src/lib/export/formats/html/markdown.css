@@ -1,0 +1,240 @@
+/*
+ * Discord look for rendered message markdown (the md-* classes emitted by renderHtml.ts).
+ *
+ * Every theme value goes through custom properties with a literal fallback (var(--x, #hex)), so the very
+ * same file also works standalone inside an exported HTML file. Wrap rendered content in `<div class="md-root">`.
+ * Spoilers: the export has no script, so :hover / :focus reveal them (`.md-spoiler-revealed` stays for any viewer that toggles it).
+ */
+
+.md-root {
+  color: var(--text-normal, #dbdee1);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.md-root strong {
+  font-weight: 700;
+}
+
+.md-root em {
+  font-style: italic;
+}
+
+.md-root u {
+  text-decoration: underline;
+}
+
+.md-root s {
+  text-decoration: line-through;
+}
+
+.md-root u s,
+.md-root s u {
+  text-decoration: underline line-through;
+}
+
+/* links */
+.md-link {
+  color: var(--link, #00a8fc);
+  text-decoration: none;
+}
+
+.md-link:hover {
+  text-decoration: underline;
+}
+
+/* Where a masked link really goes, shown when its own text names another site (`[discord.com](https://evil.example)`). */
+.md-link-host {
+  color: var(--text-muted, #949ba4);
+  font-size: 0.875em;
+  font-weight: 500;
+}
+
+/* code */
+.md-code,
+.md-pre {
+  font-family: Consolas, 'Andale Mono WT', 'Andale Mono', 'Lucida Console', monospace;
+}
+
+.md-code {
+  font-size: 0.875em;
+  padding: 0 0.3em;
+  border: 1px solid var(--bg-tertiary, #1e1f22);
+  border-radius: 4px;
+  background: var(--code-bg, #2b2d31);
+  white-space: pre-wrap;
+}
+
+.md-pre {
+  box-sizing: border-box;
+  max-width: 100%;
+  margin: 6px 0 0;
+  padding: 8px;
+  overflow-x: auto;
+  border: 1px solid var(--bg-tertiary, #1e1f22);
+  border-radius: 4px;
+  background: var(--code-bg, #2b2d31);
+  color: var(--text-normal, #dbdee1);
+  font-size: 0.875rem;
+  line-height: 1.125rem;
+  white-space: pre;
+}
+
+.md-pre > code {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  white-space: inherit;
+}
+
+/* block quote */
+.md-quote {
+  margin: 2px 0;
+  padding: 0 8px 0 12px;
+  border-left: 4px solid #4e5058;
+  border-radius: 4px;
+}
+
+/* headings and subtext */
+.md-heading {
+  margin: 8px 0 4px;
+  color: var(--text-header, #f2f3f5);
+  font-weight: 700;
+  line-height: 1.375;
+}
+
+.md-heading:first-child {
+  margin-top: 0;
+}
+
+.md-h1 {
+  font-size: 1.5rem;
+}
+
+.md-h2 {
+  font-size: 1.25rem;
+}
+
+.md-h3 {
+  font-size: 1rem;
+}
+
+.md-subtext {
+  color: var(--text-muted, #949ba4);
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+/* lists */
+.md-list {
+  margin: 4px 0;
+  padding-inline-start: 1.5em;
+  white-space: normal;
+}
+
+ul.md-list {
+  list-style: disc;
+}
+
+ul.md-list ul.md-list {
+  list-style: circle;
+}
+
+ul.md-list ul.md-list ul.md-list {
+  list-style: square;
+}
+
+ol.md-list {
+  list-style: decimal;
+}
+
+.md-list > li {
+  margin: 0;
+  padding-inline-start: 2px;
+  white-space: pre-wrap;
+}
+
+.md-list .md-list {
+  margin: 0;
+}
+
+/* spoilers: hidden by default, revealed by .md-spoiler-revealed (app) or hover / focus (static export) */
+.md-spoiler {
+  border-radius: 3px;
+  background: var(--bg-tertiary, #1e1f22);
+  color: transparent;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.1s;
+}
+
+.md-spoiler > * {
+  visibility: hidden;
+}
+
+.md-spoiler[role='button']:hover {
+  background: var(--bg-secondary, #2b2d31);
+}
+
+.md-spoiler:focus-visible {
+  outline: 2px solid var(--link, #00a8fc);
+  outline-offset: 1px;
+}
+
+.md-spoiler:is(.md-spoiler-revealed, :not([role='button']):is(:hover, :focus, :focus-within)) {
+  background: var(--bg-modifier-hover, rgba(78, 80, 88, 0.3));
+  color: inherit;
+  cursor: auto;
+  user-select: auto;
+}
+
+.md-spoiler:is(.md-spoiler-revealed, :not([role='button']):is(:hover, :focus, :focus-within)) > * {
+  visibility: visible;
+}
+
+/* mentions (read-only chips) */
+.md-mention {
+  padding: 0 2px;
+  border-radius: 3px;
+  background: rgba(88, 101, 242, 0.3);
+  color: #c9cdfb;
+  font-weight: 500;
+  transition: background-color 0.1s, color 0.1s;
+}
+
+.md-mention:hover {
+  background: var(--brand, #5865f2);
+  color: #fff;
+}
+
+/* emoji */
+.md-emoji {
+  width: 1.375em;
+  height: 1.375em;
+  margin: 0 0.05em 0 0.1em;
+  object-fit: contain;
+  vertical-align: bottom;
+}
+
+img.md-emoji-jumbo {
+  width: 3rem;
+  height: 3rem;
+  margin: 0;
+}
+
+span.md-emoji-jumbo {
+  font-size: 3rem;
+  line-height: 1.25;
+}
+
+/* timestamps */
+.md-time {
+  padding: 0 2px;
+  border-radius: 3px;
+  background: var(--bg-modifier-hover, rgba(78, 80, 88, 0.3));
+}
+
+.md-time:hover {
+  background: var(--bg-modifier-selected, rgba(78, 80, 88, 0.6));
+}

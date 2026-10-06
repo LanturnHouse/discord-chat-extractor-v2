@@ -1,0 +1,1036 @@
+/*
+ * Chat messages in Discord's "cozy" layout (dark theme).
+ * Embedded as is in the standalone HTML export (formats/html/css.ts); the DOM contract below is what message.ts emits.
+ * Theme values are custom properties (theme.css), always with a literal fallback, so the file also works without
+ * theme.css. Message text is rendered by markdown.css (.md-root); this file only styles what surrounds it.
+ *
+ * DOM contract (the HTML exporter mirrors it; all message classes are prefixed `msg-`):
+ *
+ *   div.msg-day-divider[role=separator][aria-label] > span.msg-day-divider__label
+ *       Before the first message of each calendar day. Margins collapse into the message that follows.
+ *
+ *   article.msg.msg--first | .msg--grouped            [.msg--reply] [.msg--forward] [.msg--app]  [data-message-id]
+ *     div.msg-reply[.msg-reply--deleted]              reply header, first child; the connector line is its ::before
+ *       > (img|span).msg-reply__avatar, span.msg-reply__name (> span.msg-sr-only), span.msg-reply__text
+ *     img.msg-avatar | span.msg-avatar.msg-avatar-fallback.msg-avatar-fallback--0..5 (initial)   .msg--first only
+ *     time.msg-gutter-time                            clock, visible on hover (.msg--grouped only)
+ *     div.msg-body
+ *       div.msg-header > span.msg-author, span.msg-tag (bots, webhooks), time.msg-timestamp      .msg--first only
+ *       div.msg-content > div.md-root + span.msg-edited
+ *       div.msg-forward-label > svg.msg-icon.msg-forward-label__icon + span                      forwarded messages
+ *       div.msg-forward (one per snapshot) > div.msg-content, div.msg-attachments, div.msg-embeds, time.msg-forward__time
+ *       div.msg-attachments > div.msg-attachment
+ *           .msg-attachment--image[.msg-attachment--spoiler[.msg-attachment--revealed]] > [a.msg-image-link >] img.msg-image
+ *                                                                                         [+ button.msg-spoiler-cover > span.msg-spoiler-cover__badge]
+ *           .msg-attachment--video[...spoiler] > video.msg-video
+ *           .msg-attachment--audio.msg-file / .msg-attachment--file.msg-file
+ *               > svg.msg-icon.msg-file__icon, div.msg-file__info > (a|span).msg-file__name, div.msg-file__size [, audio.msg-audio]
+ *       div.msg-embeds > div.msg-embed.msg-embed--<type>[.msg-embed--bare]   (style="border-left-color" = embed colour)
+ *           > div.msg-embed__top > div.msg-embed__text > .msg-embed__provider, .msg-embed__author
+ *                                    (> img.msg-embed__author-icon, .msg-embed__author-name), .msg-embed__title (> a.msg-embed__title-link),
+ *                                    .msg-embed__description (> div.md-root), .msg-embed__fields > .msg-embed__field
+ *                                    [.msg-embed__field--inline + .msg-embed__field--col1 | .msg-embed__field--col2 | .msg-embed__field--col3]
+ *                                    (> .msg-embed__field-name, .msg-embed__field-value)
+ *                              + div.msg-embed__thumbnail > img.msg-embed__image
+ *           > div.msg-embed__media > (img.msg-embed__image | a.msg-embed__media-link > img.msg-embed__image + span.msg-embed__play | video.msg-video)
+ *           > div.msg-embed__footer > img.msg-embed__footer-icon, span.msg-embed__footer-text (> span.msg-embed__footer-sep, time)
+ *       div.msg-stickers > div.msg-sticker > img.msg-sticker__image | span.msg-sticker__name
+ *       div.msg-poll[.msg-poll--closed] > .msg-poll__question, .msg-poll__hint, ul.msg-poll__answers
+ *           > li.msg-poll__answer[.msg-poll__answer--winner] > .msg-poll__answer-row (.msg-poll__emoji, .msg-poll__text, .msg-poll__votes)
+ *                                                             + progress.msg-poll__bar; then .msg-poll__footer
+ *       div.msg-reactions[role=group] > span.msg-reaction[.msg-reaction--me][role=img]
+ *           > (img.msg-reaction__img | span.msg-reaction__emoji[.msg-reaction__emoji--text]), span.msg-reaction__count
+ *
+ *   article.msg.msg--system > span.msg-system__icon > svg.msg-icon,
+ *       div.msg-system__text > span.msg-system__actor, time.msg-timestamp
+ *       Tone of the icon: .msg-system__icon--join, .msg-system__icon--leave, .msg-system__icon--pin,
+ *       .msg-system__icon--boost or .msg-system__icon--neutral.
+ *
+ * Inline styles are used for dynamic values only: the embed colour (border-left-color) and image sizes
+ * (width/height attributes keep the aspect ratio and prevent layout shift).
+ */
+
+.msg,
+.msg-day-divider {
+  font-family: 'gg sans', 'Noto Sans', 'Segoe UI', 'Malgun Gothic', 'Apple SD Gothic Neo', system-ui, sans-serif;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------- */
+/* day divider */
+
+.msg-day-divider {
+  position: relative;
+  box-sizing: border-box;
+  height: 0;
+  margin: 24px 16px 8px;
+  border-top: 1px solid var(--divider, #3f4147);
+}
+
+.msg-day-divider__label {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  padding: 2px 4px;
+  background: var(--bg-primary, #313338);
+  color: var(--text-muted, #949ba4);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 13px;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  user-select: none;
+}
+
+.msg-day-divider + .msg--first {
+  margin-top: 0;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------- */
+/* row */
+
+.msg {
+  --msg-reply-height: 20px;
+  position: relative;
+  box-sizing: border-box;
+  min-height: 1.375rem;
+  padding: 2px 48px 2px 72px;
+  color: var(--text-normal, #dbdee1);
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.375;
+  /*
+   * Rows far from the viewport skip layout and paint. `auto` makes the browser remember the real height once a row
+   * has been rendered, which keeps the scroll position stable when older pages are prepended.
+   */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 60px;
+}
+
+.msg--first {
+  margin-top: 1.0625rem;
+}
+
+.msg:hover,
+.msg:focus-within {
+  background-color: var(--bg-message-hover, #2e3035);
+}
+
+.msg-body {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* avatar and gutter time */
+.msg-avatar {
+  position: absolute;
+  top: 4px;
+  left: 16px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: var(--bg-tertiary, #1e1f22);
+  object-fit: cover;
+  user-select: none;
+}
+
+.msg--reply .msg-avatar {
+  top: calc(var(--msg-reply-height) + 8px);
+}
+
+.msg-avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  overflow: hidden;
+  border-radius: 50%;
+  background-color: #5865f2;
+  color: #fff;
+  font-weight: 600;
+  line-height: 1;
+  user-select: none;
+}
+
+.msg-avatar.msg-avatar-fallback {
+  font-size: 1.125rem;
+}
+
+.msg-reply__avatar.msg-avatar-fallback {
+  font-size: 0.625rem;
+}
+
+.msg-avatar-fallback--1 {
+  background-color: #747f8d;
+}
+
+.msg-avatar-fallback--2 {
+  background-color: #3ba55c;
+}
+
+.msg-avatar-fallback--3 {
+  background-color: #faa61a;
+}
+
+.msg-avatar-fallback--4 {
+  background-color: #ed4245;
+}
+
+.msg-avatar-fallback--5 {
+  background-color: #eb459e;
+}
+
+.msg-gutter-time {
+  position: absolute;
+  top: 2px;
+  left: 0;
+  box-sizing: border-box;
+  width: 56px;
+  padding-right: 4px;
+  color: var(--text-muted, #949ba4);
+  font-size: 0.6875rem;
+  line-height: 1.375rem;
+  text-align: right;
+  white-space: nowrap;
+  visibility: hidden;
+  user-select: none;
+}
+
+.msg:hover .msg-gutter-time,
+.msg:focus-within .msg-gutter-time {
+  visibility: visible;
+}
+
+/* header */
+.msg-header {
+  min-height: 1.375rem;
+  line-height: 1.375rem;
+}
+
+.msg-author {
+  margin-right: 0.25rem;
+  color: var(--text-header, #f2f3f5);
+  font-size: 1rem;
+  font-weight: 500;
+  unicode-bidi: isolate;
+}
+
+.msg-tag {
+  position: relative;
+  top: -1px;
+  display: inline-block;
+  box-sizing: border-box;
+  height: 0.9375rem;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--brand, #5865f2);
+  color: #fff;
+  font-size: 0.625rem;
+  font-weight: 500;
+  line-height: 0.9375rem;
+  text-transform: uppercase;
+  vertical-align: baseline;
+  user-select: none;
+}
+
+.msg-timestamp {
+  margin-left: 0.25rem;
+  color: var(--text-muted, #949ba4);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.375rem;
+  white-space: nowrap;
+  cursor: default;
+}
+
+/* text */
+.msg-content {
+  font-size: 1rem;
+  line-height: 1.375rem;
+  overflow-wrap: anywhere;
+}
+
+/* inline, so the "(edited)" marker sits at the end of the last line of text */
+.msg-content > .md-root {
+  display: inline;
+  unicode-bidi: isolate;
+}
+
+.msg-edited {
+  margin-left: 0.25rem;
+  color: var(--text-muted, #949ba4);
+  font-size: 0.625rem;
+  line-height: 1.375rem;
+  cursor: default;
+  user-select: none;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------- */
+/* reply header and forward label */
+
+.msg-reply {
+  position: relative;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: var(--msg-reply-height);
+  margin: 0 0 4px;
+  color: var(--interactive-normal, #b5bac1);
+  font-size: 0.875rem;
+  line-height: 1.125rem;
+  user-select: none;
+}
+
+/* The L-shaped connector: from the avatar's centre up to the reply line, then across to the mini avatar. */
+.msg-reply::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 100%;
+  bottom: -4px;
+  left: -37px;
+  margin-right: 4px;
+  border-top: 2px solid #4e5058;
+  border-left: 2px solid #4e5058;
+  border-top-left-radius: 6px;
+  pointer-events: none;
+}
+
+.msg-reply__avatar {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-right: 4px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.msg-reply__name {
+  flex: none;
+  max-width: 40%;
+  margin-right: 4px;
+  overflow: hidden;
+  color: var(--interactive-hover, #dbdee1);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  unicode-bidi: isolate;
+}
+
+.msg-reply__text {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  opacity: 0.85;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  unicode-bidi: isolate;
+}
+
+.msg-reply--deleted .msg-reply__text {
+  font-style: italic;
+}
+
+.msg-forward-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-muted, #949ba4);
+  font-size: 0.875rem;
+  font-style: italic;
+  line-height: 1.25rem;
+  user-select: none;
+}
+
+.msg-forward-label__icon {
+  flex: none;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------- */
+/* system messages */
+
+.msg--system {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+.msg-system__icon {
+  position: absolute;
+  top: 7px;
+  left: 28px;
+  display: flex;
+  width: 16px;
+  height: 16px;
+  color: var(--interactive-normal, #b5bac1);
+}
+
+.msg-system__icon--join {
+  color: #23a559;
+}
+
+.msg-system__icon--leave {
+  color: var(--danger, #f23f43);
+}
+
+.msg-system__icon--boost {
+  color: #ff73fa;
+}
+
+.msg-system__text {
+  color: var(--text-muted, #949ba4);
+  overflow-wrap: anywhere;
+}
+
+.msg-system__actor {
+  color: var(--text-header, #f2f3f5);
+  font-weight: 500;
+}
+
+.msg--system .msg-timestamp {
+  margin-left: 0.5rem;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------- */
+/* attachments */
+
+.msg-attachments {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  max-width: 100%;
+  margin-top: 4px;
+}
+
+.msg-attachment {
+  position: relative;
+  max-width: 100%;
+}
+
+.msg-attachment--image,
+.msg-attachment--video {
+  overflow: hidden;
+  border-radius: 3px;
+  line-height: 0;
+}
+
+.msg-image-link {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.msg-image,
+.msg-video {
+  display: block;
+  max-width: min(100%, 400px);
+  max-height: 300px;
+  height: auto;
+  border-radius: 3px;
+  object-fit: contain;
+}
+
+.msg-video {
+  background: #000;
+}
+
+/* spoiler media: blurred behind a clickable badge until revealed */
+.msg-attachment--spoiler:not(.msg-attachment--revealed) .msg-image {
+  /* scaled up so the soft, see-through edge of the blur falls outside the clipped frame */
+  filter: blur(44px);
+  transform: scale(1.25);
+}
+
+.msg-attachment--spoiler:not(.msg-attachment--revealed) {
+  min-width: 96px;
+  min-height: 96px;
+}
+
+.msg-spoiler-cover {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.msg-spoiler-cover__badge {
+  padding: 4px 8px;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: background-color 0.1s;
+}
+
+.msg-spoiler-cover:hover .msg-spoiler-cover__badge {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+/* file and audio cards */
+.msg-file {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  box-sizing: border-box;
+  width: 432px;
+  max-width: 100%;
+  padding: 10px;
+  border: 1px solid var(--bg-tertiary, #1e1f22);
+  border-radius: 8px;
+  background: var(--embed-bg, #2b2d31);
+  line-height: 1.25rem;
+}
+
+.msg-file__icon {
+  flex: none;
+  width: 30px;
+  height: 40px;
+  color: var(--interactive-normal, #b5bac1);
+}
+
+.msg-file__info {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.msg-file__name {
+  display: block;
+  overflow: hidden;
+  color: var(--text-normal, #dbdee1);
+  font-size: 1rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  unicode-bidi: isolate;
+}
+
+a.msg-file__name {
+  color: var(--link, #00a8fc);
+  text-decoration: none;
+}
+
+a.msg-file__name:hover {
+  text-decoration: underline;
+}
+
+.msg-file__size {
+  color: var(--text-muted, #949ba4);
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+.msg-audio {
+  display: block;
+  width: 100%;
+  max-width: 360px;
+  height: 40px;
+  margin-top: 8px;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------- */
+/* embeds */
+
+.msg-embeds {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: 100%;
+  margin-top: 8px;
+}
+
+.msg-embeds:empty {
+  display: none;
+}
+
+.msg-embed {
+  box-sizing: border-box;
+  width: fit-content;
+  max-width: min(520px, 100%);
+  padding: 8px 16px 16px;
+  border-left: 4px solid var(--bg-tertiary, #1e1f22);
+  border-radius: 4px;
+  background: var(--embed-bg, #2b2d31);
+  color: var(--text-normal, #dbdee1);
+  font-size: 0.875rem;
+  line-height: 1.125rem;
+}
+
+.msg-embed--bare {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.msg-embed--bare:empty {
+  display: none;
+}
+
+.msg-embed--bare .msg-embed__media {
+  margin-top: 0;
+}
+
+.msg-embed__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.msg-embed__text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.msg-embed__provider {
+  margin-top: 8px;
+  color: var(--text-muted, #949ba4);
+  font-size: 0.75rem;
+  line-height: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.msg-embed__author {
+  display: flex;
+  align-items: center;
+  margin-top: 8px;
+  color: var(--text-header, #f2f3f5);
+  font-weight: 600;
+}
+
+.msg-embed__author-icon {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin-right: 8px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.msg-embed__author-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  unicode-bidi: isolate;
+}
+
+a.msg-embed__author-name {
+  color: inherit;
+  text-decoration: none;
+}
+
+a.msg-embed__author-name:hover,
+.msg-embed__title-link:hover {
+  text-decoration: underline;
+}
+
+.msg-embed__title {
+  margin-top: 8px;
+  color: var(--text-header, #f2f3f5);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.375rem;
+  overflow-wrap: anywhere;
+  unicode-bidi: isolate;
+}
+
+.msg-embed__title-link {
+  color: var(--link, #00a8fc);
+  text-decoration: none;
+}
+
+.msg-embed__description {
+  margin-top: 8px;
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+
+/* Discord's field grid: 12 columns, inline fields take 4 (three per row), block fields the whole row. */
+.msg-embed__fields {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.msg-embed__field {
+  grid-column: 1 / 13;
+  min-width: 0;
+}
+
+.msg-embed__field--col1 {
+  grid-column: 1 / 5;
+}
+
+.msg-embed__field--col2 {
+  grid-column: 5 / 9;
+}
+
+.msg-embed__field--col3 {
+  grid-column: 9 / 13;
+}
+
+.msg-embed__field-name {
+  margin-bottom: 2px;
+  color: var(--text-header, #f2f3f5);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  unicode-bidi: isolate;
+}
+
+.msg-embed__field-value {
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+
+.msg-embed__thumbnail {
+  flex: none;
+  margin-top: 8px;
+  line-height: 0;
+}
+
+.msg-embed__thumbnail .msg-embed__image {
+  max-width: 80px;
+  max-height: 80px;
+}
+
+.msg-embed__media {
+  position: relative;
+  margin-top: 16px;
+  line-height: 0;
+}
+
+.msg-embed__image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  object-fit: contain;
+}
+
+.msg-embed__media-link {
+  position: relative;
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.msg-embed__play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  margin: -24px 0 0 -24px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+}
+
+.msg-embed__footer {
+  display: flex;
+  align-items: center;
+  margin-top: 8px;
+  color: var(--text-muted, #949ba4);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1rem;
+}
+
+.msg-embed__footer-icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.msg-embed__footer-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------- */
+/* stickers */
+
+.msg-stickers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+  line-height: 0;
+}
+
+.msg-sticker__image {
+  display: block;
+  width: 160px;
+  max-width: 100%;
+  height: 160px;
+  object-fit: contain;
+}
+
+.msg-sticker__name {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 96px;
+  min-height: 48px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--embed-bg, #2b2d31);
+  color: var(--text-muted, #949ba4);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------- */
+/* polls */
+
+.msg-poll {
+  box-sizing: border-box;
+  max-width: 432px;
+  margin-top: 8px;
+  padding: 12px 16px 16px;
+  border: 1px solid var(--divider, #3f4147);
+  border-radius: 8px;
+  background: var(--embed-bg, #2b2d31);
+  color: var(--text-normal, #dbdee1);
+}
+
+.msg-poll__question {
+  color: var(--text-header, #f2f3f5);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  overflow-wrap: anywhere;
+}
+
+.msg-poll__hint {
+  margin-top: 2px;
+  color: var(--text-muted, #949ba4);
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+.msg-poll__answers {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.msg-poll__answer {
+  padding: 8px 12px;
+  border: 1px solid var(--divider, #3f4147);
+  border-radius: 8px;
+}
+
+.msg-poll__answer--winner {
+  border-color: var(--brand, #5865f2);
+}
+
+.msg-poll__answer-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.msg-poll__emoji {
+  flex: none;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.msg-poll__text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  unicode-bidi: isolate;
+}
+
+.msg-poll__votes {
+  flex: none;
+  color: var(--text-muted, #949ba4);
+  font-size: 0.75rem;
+}
+
+.msg-poll__bar {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  height: 8px;
+  margin-top: 6px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 4px;
+  background: var(--bg-tertiary, #1e1f22);
+  color: var(--interactive-normal, #b5bac1);
+  appearance: none;
+}
+
+.msg-poll__bar::-webkit-progress-bar {
+  background: var(--bg-tertiary, #1e1f22);
+}
+
+.msg-poll__bar::-webkit-progress-value {
+  border-radius: 4px;
+  background: var(--interactive-normal, #b5bac1);
+}
+
+.msg-poll__bar::-moz-progress-bar {
+  border-radius: 4px;
+  background: var(--interactive-normal, #b5bac1);
+}
+
+.msg-poll__answer--winner .msg-poll__bar {
+  color: var(--brand, #5865f2);
+}
+
+.msg-poll__answer--winner .msg-poll__bar::-webkit-progress-value {
+  background: var(--brand, #5865f2);
+}
+
+.msg-poll__answer--winner .msg-poll__bar::-moz-progress-bar {
+  background: var(--brand, #5865f2);
+}
+
+.msg-poll__footer {
+  margin-top: 12px;
+  color: var(--text-muted, #949ba4);
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------- */
+/* forwarded messages */
+
+.msg-forward {
+  box-sizing: border-box;
+  max-width: 520px;
+  margin-top: 4px;
+  padding: 4px 12px 8px;
+  border: 1px solid var(--divider, #3f4147);
+  border-left: 4px solid #4e5058;
+  border-radius: 4px;
+}
+
+.msg-forward__time {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-muted, #949ba4);
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+.msg-forward .msg-attachments,
+.msg-forward .msg-embeds {
+  margin-top: 4px;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------- */
+/* reactions */
+
+.msg-reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.msg-reaction {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: 24px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--bg-secondary, #2b2d31);
+  color: var(--interactive-normal, #b5bac1);
+  font-size: 0.875rem;
+  line-height: 1;
+  user-select: none;
+}
+
+.msg-reaction--me {
+  border-color: var(--brand, #5865f2);
+  background: rgba(88, 101, 242, 0.15);
+}
+
+.msg-reaction__img {
+  display: block;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.msg-reaction__emoji {
+  flex: none;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.msg-reaction__emoji--text {
+  font-size: 0.75rem;
+}
+
+.msg-reaction__count {
+  margin-left: 6px;
+  font-weight: 500;
+}
+
+.msg-reaction--me .msg-reaction__count {
+  color: #c9cdfb;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------- */
+/* shared helpers */
+
+.msg-icon {
+  flex: none;
+}
+
+.msg-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.msg a:focus-visible,
+.msg button:focus-visible,
+.msg video:focus-visible,
+.msg audio:focus-visible {
+  outline: 2px solid var(--link, #00a8fc);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .msg,
+  .msg * {
+    transition: none !important;
+  }
+}

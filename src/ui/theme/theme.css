@@ -1,0 +1,243 @@
+/*
+ * Design tokens of the extension UI (docs/PLAN.md §7.4).
+ *
+ * Two layers:
+ *  1. `--dce-f-*`  the fallback palette: Discord's own dark colours (light ones under [data-theme='light']).
+ *  2. `--dce-*`    the tokens components use. Each one is the matching Discord variable when the content script captured it
+ *                  into `dce.theme` (applyTheme.ts sets those variables on <html>), otherwise the fallback.
+ * Components never use a Discord variable or a literal colour directly, so a missing or odd theme can only change a colour,
+ * never break the layout.
+ */
+
+:root {
+  color-scheme: dark;
+
+  /* fallback palette: Discord dark */
+  --dce-f-bg-primary: #313338;
+  --dce-f-bg-secondary: #2b2d31;
+  --dce-f-bg-tertiary: #1e1f22;
+  --dce-f-bg-floating: #111214;
+  --dce-f-hover: rgba(78, 80, 88, 0.3);
+  --dce-f-active: rgba(78, 80, 88, 0.48);
+  --dce-f-selected: rgba(78, 80, 88, 0.6);
+  --dce-f-text: #dbdee1;
+  --dce-f-text-strong: #f2f3f5;
+  --dce-f-text-muted: #949ba4;
+  --dce-f-link: #00a8fc;
+  --dce-f-icon: #b5bac1;
+  --dce-f-icon-hover: #dbdee1;
+  --dce-f-icon-active: #ffffff;
+  --dce-f-icon-muted: #80848e;
+  --dce-f-neutral: #4e5058;
+  --dce-f-brand: #5865f2;
+  --dce-f-brand-hover: #4752c4;
+  --dce-f-danger: #da373c;
+  --dce-f-text-danger: #fa777c;
+  --dce-f-success: #23a55a;
+  --dce-f-warning: #f0b232;
+  --dce-f-border: #3f4147;
+  --dce-f-input-bg: #1e1f22;
+  --dce-f-input-border: #3f4147;
+  --dce-f-scrollbar: #1a1b1e;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --dce-f-bg-primary: #ffffff;
+  --dce-f-bg-secondary: #f2f3f5;
+  --dce-f-bg-tertiary: #e3e5e8;
+  --dce-f-bg-floating: #ffffff;
+  --dce-f-hover: rgba(116, 127, 141, 0.1);
+  --dce-f-active: rgba(116, 127, 141, 0.16);
+  --dce-f-selected: rgba(116, 127, 141, 0.24);
+  --dce-f-text: #313338;
+  --dce-f-text-strong: #060607;
+  --dce-f-text-muted: #5c5e66;
+  --dce-f-link: #006ce7;
+  --dce-f-icon: #4e5058;
+  --dce-f-icon-hover: #313338;
+  --dce-f-icon-active: #060607;
+  --dce-f-icon-muted: #80848e;
+  --dce-f-neutral: #80848e;
+  --dce-f-brand: #5865f2;
+  --dce-f-brand-hover: #4752c4;
+  --dce-f-danger: #d83c3e;
+  --dce-f-text-danger: #d12d35;
+  --dce-f-success: #248046;
+  --dce-f-warning: #946500;
+  --dce-f-border: #d7d9dc;
+  --dce-f-input-bg: #e3e5e8;
+  --dce-f-input-border: #c4c9ce;
+  --dce-f-scrollbar: #c4c9ce;
+}
+
+:root {
+  /* surfaces: primary = the popup, secondary = rows / panels, tertiary = recessed inputs and segmented controls */
+  --dce-bg-primary: var(--background-base-low, var(--dce-f-bg-primary));
+  --dce-bg-secondary: var(--background-base-lower, var(--dce-f-bg-secondary));
+  --dce-bg-tertiary: var(--background-base-lowest, var(--dce-f-bg-tertiary));
+  --dce-bg-floating: var(--modal-background, var(--dce-f-bg-floating));
+  --dce-bg-input: var(--input-background-default, var(--dce-f-input-bg));
+  --dce-bg-hover: var(--interactive-background-hover, var(--dce-f-hover));
+  --dce-bg-active: var(--interactive-background-active, var(--dce-f-active));
+  --dce-bg-selected: var(--interactive-background-selected, var(--dce-f-selected));
+
+  /* text */
+  --dce-text: var(--text-default, var(--dce-f-text));
+  --dce-text-strong: var(--text-strong, var(--dce-f-text-strong));
+  --dce-text-muted: var(--text-muted, var(--dce-f-text-muted));
+  --dce-link: var(--text-link, var(--dce-f-link));
+  --dce-text-danger: var(--dce-f-text-danger);
+
+  /* icons */
+  --dce-icon: var(--interactive-icon-default, var(--dce-f-icon));
+  --dce-icon-hover: var(--interactive-icon-hover, var(--dce-f-icon-hover));
+  --dce-icon-active: var(--interactive-icon-active, var(--dce-f-icon-active));
+  --dce-icon-muted: var(--channel-icon, var(--dce-f-icon-muted));
+  --dce-neutral: var(--interactive-muted, var(--dce-f-neutral));
+
+  /* accents */
+  --dce-brand: var(--brand-500, var(--dce-f-brand));
+  --dce-brand-hover: var(--brand-560, var(--dce-f-brand-hover));
+  --dce-brand-active: color-mix(in srgb, var(--dce-brand-hover) 84%, #000);
+  /*
+   * Text and icons ON a brand (or danger) fill: always white, Discord's own `--white` (#fff when the page never defined it).
+   * Never `--control-brand-foreground`: the current Discord build defines no "text on brand" variable at all, and that one is a
+   * light lavender meant for brand-COLOURED text on neutral backgrounds, so on a brand fill it reads as washed out / disabled.
+   * The fill itself is the brand family (--brand-500, --brand-560 on hover), which is the same on the dark and the light theme.
+   */
+  --dce-on-brand: var(--white, #fff);
+  --dce-danger: var(--dce-f-danger);
+  --dce-danger-hover: color-mix(in srgb, var(--dce-danger) 84%, #000);
+  --dce-success: var(--status-positive, var(--dce-f-success));
+  --dce-warning: var(--status-warning, var(--dce-f-warning));
+
+  --dce-border: var(--border-subtle, var(--dce-f-border));
+  --dce-input-border: var(--input-border-default, var(--dce-f-input-border));
+  --dce-focus: var(--dce-link);
+  --dce-scrollbar: var(--dce-f-scrollbar);
+
+  /* fixed: Discord's own font stack is not available to an extension page, and these keep Korean text readable */
+  --dce-font: 'gg sans', 'Noto Sans', 'Segoe UI', 'Malgun Gothic', 'Apple SD Gothic Neo', system-ui, sans-serif;
+  --dce-radius-xs: 3px;
+  --dce-radius-sm: 4px;
+  --dce-radius-md: 8px;
+  --dce-radius-pill: 999px;
+  --dce-shadow-high: 0 8px 16px rgba(0, 0, 0, 0.24);
+}
+
+/* --- document defaults --------------------------------------------------------------------------------------------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--dce-bg-primary);
+}
+
+body {
+  margin: 0;
+  background: var(--dce-bg-primary);
+  color: var(--dce-text);
+  font-family: var(--dce-font);
+  font-size: 13px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+ul,
+ol,
+dl,
+dd,
+figure {
+  margin: 0;
+}
+
+button {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+button:disabled,
+button[aria-disabled='true'] {
+  cursor: not-allowed;
+}
+
+input,
+select,
+textarea {
+  margin: 0;
+  color: inherit;
+  font: inherit;
+}
+
+a {
+  color: var(--dce-link);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* Keyboard focus is always visible; mouse focus never draws a ring. */
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--dce-focus);
+  outline-offset: 2px;
+}
+
+/* Thin, theme-aware scrollbars (only the webkit pseudo-elements: `scrollbar-width` would make Chrome ignore them). */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  min-height: 32px;
+  border-radius: var(--dce-radius-pill);
+  background: var(--dce-scrollbar);
+}
+
+@keyframes dce-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* People who asked for less motion never get smooth scrolling (spinners and progress bars slow down in components.css). */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto !important;
+  }
+}

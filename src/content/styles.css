@@ -1,0 +1,281 @@
+/*
+ * Content script styles. Shipped inside content.js as text (`?inline`) and injected as <style id="dce-style"> while the
+ * buttons are on. Colours come from Discord's own CSS variables (docs/PLAN.md §4) with dark-theme fallbacks.
+ * (The server button of the guild header works the same way, with `.dce-guild-btn` as its fallback.)
+ *
+ * Every row button is ALWAYS visible (PLAN §2 "버튼 표시"): there is no hover / focus / selection rule in this file that shows or
+ * hides a BUTTON (the only hover rules are colours, and the check mark -> cross swap of a checked button's glyph). Discord's
+ * classes (`iconItem_*`, `closeButton_*`) are `display:none` until the row is hovered, so each button carries our own class
+ * `.dce-always`, which forces `display` with !important.
+ *
+ * A button whose look is mirrored from Discord's native icon (data-dce-src="native") carries Discord's classes and needs
+ * nothing from here except that forced visibility; the same goes for learned classes (data-dce-src="cache", also what a
+ * category row copies). A button with nothing to copy (data-dce-src="fallback") is `.dce-row-btn`: drawn by this file alone.
+ */
+
+[data-dce="row-btn"] {
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+[data-dce="row-btn"] svg {
+  pointer-events: none;
+}
+
+/* ---- always visible: beats Discord's hover-only rules (a DM's close button is a flex box) ---- */
+.dce-always {
+  display: block !important;
+}
+
+.dce-always[data-dce-kind="dm"] {
+  display: flex !important;
+}
+
+/*
+ * ---- checked button: the check mark turns into a cross while the pointer is on it (or it has keyboard focus) ----
+ * Every button svg (rows, categories, the server button) holds two paths (inject/icons.ts): the STATE glyph (arrow / check mark)
+ * and the cross. The cross is hidden; a button that is checked (`data-dce-state="queued"`, set by the script, nothing else) shows
+ * it instead of the check mark while it is hovered or `:focus-visible`: "a click takes it out of the list". Display only: the svg
+ * keeps its size, the colour is whatever the button already has (mirrored from Discord, or the fallback rules below), and nothing
+ * happens to a button that is not checked. The selector is about the button itself, so the `!important` display rules above and
+ * Discord's own classes on it do not matter.
+ * Exception: a button that has just become checked because of the user's own click still has the pointer on it, and the cross
+ * would take the check mark's place before it was seen. The script marks it `data-dce-fresh` (inject/fresh.ts) until the pointer
+ * leaves, it loses focus, or a few seconds have passed; nothing is swapped while the mark is there.
+ */
+[data-dce-glyph="remove"] {
+  display: none;
+}
+
+[data-dce-state="queued"]:not([data-dce-fresh]):hover [data-dce-glyph="state"],
+[data-dce-state="queued"]:not([data-dce-fresh]):focus-visible [data-dce-glyph="state"] {
+  display: none;
+}
+
+[data-dce-state="queued"]:not([data-dce-fresh]):hover [data-dce-glyph="remove"],
+[data-dce-state="queued"]:not([data-dce-fresh]):focus-visible [data-dce-glyph="remove"] {
+  display: inline;
+}
+
+/* ---- fallback look (PLAN §4): no native icon to copy, nothing learned yet ---- */
+.dce-row-btn {
+  display: block;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  margin-left: 4px;
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--interactive-text-default, #b5bac1);
+}
+
+.dce-row-btn > .dce-row-icon {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+.dce-row-btn:hover {
+  color: var(--interactive-text-hover, #dbdee1);
+}
+
+.dce-row-btn:active {
+  color: var(--interactive-text-active, #ffffff);
+}
+
+.dce-row-btn:focus-visible {
+  outline: 2px solid var(--brand-500, #5865f2);
+  outline-offset: 1px;
+}
+
+.dce-row-btn[data-dce-kind="dm"] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* A category's line holds the title and the hover-only "create channel" button: ours sits at its end, in the icon colours. */
+.dce-row-btn[data-dce-kind="category"] {
+  align-self: center;
+  color: var(--interactive-icon-default, #b5bac1);
+}
+
+.dce-row-btn[data-dce-kind="category"]:hover {
+  color: var(--interactive-icon-hover, #dbdee1);
+}
+
+.dce-row-btn[data-dce-kind="category"]:active {
+  color: var(--interactive-icon-active, #ffffff);
+}
+
+/* ---- server button in the guild header (PLAN §4 "서버 이름 헤더"): always visible, no hover rule of any row applies ---- */
+/*
+ * The header content is a flex box with `justify-content: space-between`: the auto margin takes the free space first, so our
+ * wrapper sits right next to the invite button (Discord's own gap between them) instead of floating in the middle. Without an
+ * invite button it is the last child and goes to the right edge. (The script sets the same margin inline.)
+ */
+[data-dce="guild-wrap"] {
+  margin-left: auto;
+}
+
+[data-dce="guild-btn"] {
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+[data-dce="guild-btn"] svg {
+  pointer-events: none;
+}
+
+/* A request is in flight: the button looks busy (the script drops further clicks). */
+[data-dce="guild-btn"][aria-busy="true"] {
+  opacity: 0.5;
+  cursor: progress;
+}
+
+/* Fallback look, only when the header has no invite button to copy (an account that cannot invite): Discord's icon button. */
+.dce-guild-btn {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm, 4px);
+  cursor: pointer;
+  color: var(--interactive-icon-default, #b5bac1);
+}
+
+.dce-guild-btn > .dce-guild-icon {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+
+.dce-guild-btn:hover {
+  color: var(--interactive-icon-hover, #dbdee1);
+}
+
+.dce-guild-btn:active {
+  color: var(--interactive-icon-active, #ffffff);
+}
+
+.dce-guild-btn:focus-visible {
+  outline: 2px solid var(--brand-500, #5865f2);
+  outline-offset: -2px;
+}
+
+/* ---- overlay root: tooltip + toast ---- */
+#dce-root {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  pointer-events: none;
+  --dce-font: var(--font-primary, "gg sans", "Noto Sans", "Helvetica Neue", Helvetica, Arial, sans-serif);
+  --dce-tooltip-bg: var(--background-base-lowest, #111214);
+  --dce-tooltip-fg: var(--text-default, #dbdee1);
+}
+
+/* Discord keeps its tooltips dark in the light theme too. */
+html.theme-light #dce-root {
+  --dce-tooltip-bg: #111214;
+  --dce-tooltip-fg: #f2f3f5;
+}
+
+.dce-tooltip {
+  position: fixed;
+  left: 0;
+  top: 0;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: 240px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm, 5px);
+  background: var(--dce-tooltip-bg);
+  color: var(--dce-tooltip-fg);
+  font: 600 14px/16px var(--dce-font);
+  text-align: center;
+  overflow-wrap: anywhere;
+  box-shadow: 0 8px 16px rgb(0 0 0 / 24%);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.1s ease, visibility 0s linear 0.1s;
+}
+
+.dce-tooltip[data-visible="true"] {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.1s ease;
+}
+
+.dce-tooltip::after {
+  content: "";
+  position: absolute;
+  left: var(--dce-arrow-x, 50%);
+  width: 0;
+  height: 0;
+  margin-left: -5px;
+  border: 5px solid transparent;
+}
+
+.dce-tooltip[data-placement="top"]::after {
+  top: 100%;
+  border-top-color: var(--dce-tooltip-bg);
+}
+
+.dce-tooltip[data-placement="bottom"]::after {
+  bottom: 100%;
+  border-bottom-color: var(--dce-tooltip-bg);
+}
+
+.dce-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(520px, calc(100vw - 32px));
+  padding: 10px 16px;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--border-subtle, rgb(255 255 255 / 8%));
+  background: var(--background-surface-higher, #2b2d31);
+  color: var(--text-default, #dbdee1);
+  font: 500 14px/18px var(--dce-font);
+  overflow-wrap: anywhere;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 40%);
+  opacity: 0;
+  transform: translate(-50%, 8px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.dce-toast[data-visible="true"] {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.dce-toast svg {
+  flex: 0 0 auto;
+}
+
+.dce-toast[data-kind="success"] svg {
+  color: var(--status-positive, #23a55a);
+}
+
+.dce-toast[data-kind="info"] svg {
+  color: var(--status-warning, #f0b232);
+}
+
+.dce-toast[data-kind="error"] svg {
+  color: var(--status-danger, #f23f43);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dce-tooltip,
+  .dce-toast {
+    transition: none;
+  }
+}

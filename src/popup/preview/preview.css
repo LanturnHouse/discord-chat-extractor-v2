@@ -1,0 +1,80 @@
+/* The page around the popup in `popup.html?mock=1` (inspecting the popup in a normal browser tab). Never part of a real popup. */
+
+html:has(body.dce-preview) {
+  overflow: auto;
+}
+
+body.dce-preview {
+  width: auto;
+  min-height: 100vh;
+  overflow: auto;
+  background: var(--dce-bg-tertiary);
+}
+
+.dce-preview {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 24px;
+  padding: 24px;
+}
+
+.dce-preview__frame {
+  width: 380px;
+  max-height: 600px;
+  overflow: hidden;
+  border: 1px solid var(--dce-border);
+  border-radius: var(--dce-radius-md);
+  background: var(--dce-bg-primary);
+  box-shadow: var(--dce-shadow-high);
+}
+
+.dce-preview__controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 300px;
+  padding: 16px;
+  border: 1px solid var(--dce-border);
+  border-radius: var(--dce-radius-md);
+  background: var(--dce-bg-primary);
+  font-size: 12px;
+}
+
+.dce-preview__controls h2,
+.dce-preview__controls h3 {
+  margin: 0;
+  color: var(--dce-text-strong);
+  font-size: 13px;
+}
+
+.dce-preview__controls p {
+  color: var(--dce-text-muted);
+}
+
+.dce-preview__controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--dce-text);
+  font-weight: 500;
+}
+
+.dce-preview__controls select {
+  height: 28px;
+  padding: 0 6px;
+  border: 1px solid var(--dce-input-border);
+  border-radius: var(--dce-radius-sm);
+  background: var(--dce-bg-input);
+  color: var(--dce-text);
+}
+
+.dce-preview__log {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--dce-text-muted);
+  font-family: Consolas, 'Andale Mono', monospace;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}

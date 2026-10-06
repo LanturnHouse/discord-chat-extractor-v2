@@ -1,0 +1,85 @@
+/*
+ * Design tokens: Discord's dark theme, as CSS custom properties on :root.
+ * The exported file picks the dark or the light token set by `<html data-theme>`; every component colours itself through these variables.
+ */
+:root {
+  color-scheme: dark;
+
+  /* surfaces */
+  --bg-primary: #313338; /* chat area */
+  --bg-secondary: #2b2d31; /* channel sidebar */
+  --bg-tertiary: #1e1f22; /* server rail */
+  --bg-message-hover: #2e3035;
+  --bg-floating: #111214; /* popovers, tooltips, menus */
+  --bg-input: #1e1f22;
+  --bg-modifier-hover: rgba(78, 80, 88, 0.3);
+  --bg-modifier-active: rgba(78, 80, 88, 0.48);
+  --bg-modifier-selected: rgba(78, 80, 88, 0.6);
+  --code-bg: #2b2d31;
+  --embed-bg: #2b2d31;
+
+  /* text */
+  --text-normal: #dbdee1;
+  --text-header: #f2f3f5;
+  --text-muted: #949ba4;
+  --text-danger: #fa777c;
+  --text-positive: #23a55a;
+  --text-warning: #f0b232;
+  --link: #00a8fc;
+
+  /* icons & interactive elements */
+  --channel-icon: #80848e;
+  --interactive-normal: #b5bac1;
+  --interactive-hover: #dbdee1;
+  --interactive-active: #ffffff;
+  --interactive-muted: #4e5058;
+
+  /* accents */
+  --brand: #5865f2;
+  --brand-hover: #4752c4;
+  --brand-active: #3c45a5;
+  --danger: #f23f43;
+  --danger-hover: #da373c;
+  --success: #23a55a;
+  --warning: #f0b232;
+  --on-brand: #ffffff;
+
+  --divider: #3f4147;
+  --focus-ring: var(--brand);
+  --selection-bg: rgba(0, 103, 184, 0.7);
+
+  /* scrollbars: thin, never the white OS ones */
+  --scrollbar-thumb: #1a1b1e;
+  --scrollbar-track: transparent;
+
+  /* typography */
+  --font-sans: 'gg sans', 'Noto Sans', 'Segoe UI', 'Malgun Gothic', 'Apple SD Gothic Neo', system-ui, sans-serif;
+  --font-mono: Consolas, 'Andale Mono WT', 'Andale Mono', 'Lucida Console', monospace;
+
+  /* geometry */
+  --rail-width: 72px;
+  --sidebar-width: 240px;
+  --topbar-height: 48px;
+  --min-app-width: 900px;
+
+  --radius-xs: 3px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  /* elevation */
+  --shadow-header: 0 1px 0 rgba(4, 4, 5, 0.2), 0 1.5px 0 rgba(6, 6, 7, 0.05), 0 2px 0 rgba(4, 4, 5, 0.05);
+  --shadow-low: 0 1px 0 rgba(4, 4, 5, 0.2), 0 1.5px 0 rgba(6, 6, 7, 0.05), 0 2px 0 rgba(4, 4, 5, 0.05);
+  --shadow-medium: 0 4px 4px rgba(0, 0, 0, 0.16);
+  --shadow-high: 0 8px 16px rgba(0, 0, 0, 0.24);
+
+  /* stacking order: later entries sit above earlier ones */
+  --z-base: 0;
+  --z-sticky: 10; /* top bar, sticky date dividers */
+  --z-dropdown: 100;
+  --z-popover: 200;
+  --z-modal: 300;
+  --z-toast: 400;
+  --z-tooltip: 500;
+}

@@ -1,0 +1,14 @@
+{
+  "extName": {
+    "message": "Discord Chat Extractor v2",
+    "description": "Extension name (toolbar tooltip, chrome://extensions, Web Store)."
+  },
+  "extDescription": {
+    "message": "Pick channels and DMs on Discord web, then download their chat history as TXT, HTML, Markdown, Excel, CSV or JSON in one go.",
+    "description": "Extension description (max 132 characters)."
+  },
+  "cmdAddCurrent": {
+    "message": "Add or remove the chat you are viewing in the download list",
+    "description": "Description of the add-current-chat keyboard shortcut (chrome://extensions/shortcuts)."
+  }
+}

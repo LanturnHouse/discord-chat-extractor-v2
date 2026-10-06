@@ -1,0 +1,14 @@
+{
+  "extName": {
+    "message": "디스코드 채팅 추출기 v2",
+    "description": "Extension name (toolbar tooltip, chrome://extensions, Web Store)."
+  },
+  "extDescription": {
+    "message": "디스코드 웹에서 채널과 DM의 채팅을 목록에 담아 TXT, HTML, Markdown, Excel, CSV, JSON 파일로 한 번에 내려받습니다.",
+    "description": "Extension description (max 132 characters)."
+  },
+  "cmdAddCurrent": {
+    "message": "보고 있는 채팅을 다운로드 목록에 추가하거나 빼기",
+    "description": "Description of the add-current-chat keyboard shortcut (chrome://extensions/shortcuts)."
+  }
+}

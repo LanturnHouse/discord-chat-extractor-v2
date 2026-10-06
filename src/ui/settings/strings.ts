@@ -1,0 +1,126 @@
+import { defineStrings } from '../i18n/core';
+import type { NumberFormatter } from '../i18n/locale';
+
+/** Strings of the settings panel (docs/PLAN.md §7.3): the common settings and one chat's own settings. */
+export const settingsStrings = defineStrings({
+  ko: {
+    // format
+    formatLabel: '형식',
+    descHtml: '디스코드처럼 보이는 파일 · 읽기에 가장 좋아요 (권장)',
+    descTxt: '일반 텍스트',
+    descMd: 'Notion · Obsidian · GitHub용',
+    descXlsx: 'Excel · 정렬하고 필터링',
+    descCsv: '스프레드시트 · 데이터 분석용',
+    descJson: '프로그램용 전체 원본 데이터',
+    themeLabel: 'HTML 테마',
+    themeDark: '다크',
+    themeLight: '라이트',
+
+    // number of messages
+    countLabel: '메시지 개수',
+    countModeLimit: '개수 지정',
+    countModeAll: '전체',
+    countInputLabel: '내보낼 메시지 개수',
+    countUnit: '개',
+    quickPicks: '빠른 선택',
+    countHelpNewest: (count: number, fmt: NumberFormatter) => `가장 최근 메시지부터 거슬러 올라가 ${fmt(count)}개를 내보내요.`,
+    countHelpInRange: (count: number, fmt: NumberFormatter) => `기간 안에서 최신 ${fmt(count)}개를 내보내요.`,
+    countAllInRange: '기간 안의 모든 메시지를 내보내요.',
+    countAllWarning: '채널의 모든 메시지를 내보내요. 메시지가 많으면 시간이 오래 걸리고 요청도 많아져요.',
+    countEmpty: '메시지 개수를 입력하세요.',
+    countWhole: '소수점 없이 정수로 입력하세요.',
+    countRange: (max: number, fmt: NumberFormatter) => `1에서 ${fmt(max)} 사이의 숫자를 입력하세요.`,
+
+    // date range
+    rangeLabel: '기간',
+    fromLabel: '시작일',
+    toLabel: '종료일',
+    clearFrom: '시작일 지우기',
+    clearTo: '종료일 지우기',
+    rangeHelp: '비워 두면 전체 기간을 내보내요.',
+    invalidDate: '올바른 날짜를 입력하세요.',
+    invalidRange: '시작일이 종료일보다 늦어요.',
+
+    // more
+    moreLabel: '더보기',
+    optAttachments: '첨부파일 함께 저장',
+    optAttachmentsHelp: '이미지와 파일도 함께 내려받아요. 용량이 커지고 시간이 더 걸려요.',
+    optThreads: '스레드 포함',
+    optThreadsHelp: '채널 안의 스레드(포럼 글)도 함께 저장해요.',
+    optThreadsWarning: '스레드를 찾는 데 요청이 많이 들어서 시간이 오래 걸리고, 디스코드가 요청을 제한할 수 있어요.',
+    optIncremental: '새 메시지만 받기',
+    optIncrementalHelp: '지난번에 받은 이후의 메시지만 내려받아요.',
+    optIncrementalGap: (count: number, fmt: NumberFormatter) =>
+      `개수 제한(${fmt(count)}개)과 함께 쓰면 지난번 이후 메시지가 ${fmt(count)}개보다 많을 때 그 사이가 비어요. 빠짐없이 받으려면 개수를 "전체"로 하세요.`,
+    contentLabel: '포함할 내용',
+    optBots: '봇 메시지 포함',
+    optSystem: '시스템 메시지 포함',
+    optReactions: '반응 포함',
+    optEmbeds: '임베드 포함',
+
+    // common settings only
+    languageLabel: '언어',
+    languageAuto: '자동',
+    languageHelp: '앱 화면과 내보낸 파일 안의 고정 문구(항목 이름, 시스템 메시지 등) 언어가 함께 바뀌어요. 자동은 디스코드/브라우저 언어를 따라요.',
+    zipLabel: 'ZIP 하나로 받기',
+    zipHelp: '체크하면 여러 채팅을 ZIP 파일 하나로 저장해요.',
+  },
+  en: {
+    formatLabel: 'Format',
+    descHtml: 'Looks like Discord · best for reading (recommended)',
+    descTxt: 'Plain text',
+    descMd: 'For Notion · Obsidian · GitHub',
+    descXlsx: 'Excel · sort and filter',
+    descCsv: 'Spreadsheets · data analysis',
+    descJson: 'Full raw data for programs',
+    themeLabel: 'HTML theme',
+    themeDark: 'Dark',
+    themeLight: 'Light',
+
+    countLabel: 'Number of messages',
+    countModeLimit: 'Limit to N',
+    countModeAll: 'All',
+    countInputLabel: 'Messages to export',
+    countUnit: 'messages',
+    quickPicks: 'Quick picks',
+    countHelpNewest: (count, fmt) =>
+      `Starts from the latest message and goes back until ${fmt(count)} ${count === 1 ? 'message is' : 'messages are'} collected.`,
+    countHelpInRange: (count, fmt) => (count === 1 ? 'The newest message inside the date range.' : `The newest ${fmt(count)} messages inside the date range.`),
+    countAllInRange: 'Every message inside the date range.',
+    countAllWarning: 'Exports every message of the chat. A long chat takes a long time and needs many requests.',
+    countEmpty: 'Enter the number of messages.',
+    countWhole: 'Use a whole number, without decimals.',
+    countRange: (max, fmt) => `Enter a number from 1 to ${fmt(max)}.`,
+
+    rangeLabel: 'Date range',
+    fromLabel: 'From',
+    toLabel: 'To',
+    clearFrom: 'Clear start date',
+    clearTo: 'Clear end date',
+    rangeHelp: 'Leave empty to export every date.',
+    invalidDate: 'Enter a valid date.',
+    invalidRange: 'The start date is later than the end date.',
+
+    moreLabel: 'More',
+    optAttachments: 'Save attachments too',
+    optAttachmentsHelp: 'Downloads images and files as well. Takes more space and time.',
+    optThreads: 'Include threads',
+    optThreadsHelp: 'Also saves the threads (forum posts) of the chat.',
+    optThreadsWarning: 'Finding threads needs many requests, so it takes much longer and Discord may rate-limit you.',
+    optIncremental: 'New messages only',
+    optIncrementalHelp: 'Only downloads the messages since the last export.',
+    optIncrementalGap: (count, fmt) =>
+      `Together with the limit of ${fmt(count)}, anything between the last export and the newest ${fmt(count)} messages is skipped when more than ${fmt(count)} messages are new. Set the number to "All" to miss nothing.`,
+    contentLabel: 'Content to include',
+    optBots: 'Include bot messages',
+    optSystem: 'Include system messages',
+    optReactions: 'Include reactions',
+    optEmbeds: 'Include embeds',
+
+    languageLabel: 'Language',
+    languageAuto: 'Auto',
+    languageHelp: 'Changes the language of the app and of the fixed text inside exported files (labels, system messages). Auto follows the Discord / browser language.',
+    zipLabel: 'Save as one ZIP',
+    zipHelp: 'When checked, several chats are saved together in one ZIP file.',
+  },
+});
