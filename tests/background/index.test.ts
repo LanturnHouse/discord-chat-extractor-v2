@@ -97,7 +97,7 @@ describe('listener registration', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('observes only Discord API XHR traffic, read-only (no blocking), with extraHeaders', async () => {
+  it('observes only Discord API XHR traffic, read-only (no blocking), without extraHeaders (no cookie headers)', async () => {
     installFakeDiscordApi();
     await bootWorker(fake);
     const [filter, extraInfoSpec] = fake.onBeforeSendHeaders.extras[0];
@@ -106,9 +106,9 @@ describe('listener registration', () => {
       'https://discord.com/api/*',
       'https://ptb.discord.com/api/*',
       'https://canary.discord.com/api/*',
-      'https://discordapp.com/api/*',
     ]);
-    expect(extraInfoSpec).toEqual(['requestHeaders', 'extraHeaders']);
+    expect(extraInfoSpec).toEqual(['requestHeaders']);
+    expect(extraInfoSpec).not.toContain('extraHeaders');
     expect(extraInfoSpec).not.toContain('blocking');
   });
 });

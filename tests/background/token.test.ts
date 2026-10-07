@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   clearTokenIfEqual,
+  type ConsentGate,
   createTokenCapture,
   DISCORD_API_URL_PATTERNS,
   extractToken,
@@ -13,6 +14,9 @@ import { SESSION } from '@/shared';
 
 const TOKEN = ['MTIzNDU2Nzg5MDEyMzQ1Njc4', 'Gabcde', 'abcdefghijklmnopqrstuvwxyz0123456789'].join('.'); // fake value, built from parts so secret scanners do not mistake it for a real token
 const OTHER_TOKEN = ['ODc2NTQzMjEwOTg3NjU0MzIx', 'Gxyzab', 'zyxwvutsrqponmlkjihgfedcba9876543210'].join('.'); // fake value, built from parts so secret scanners do not mistake it for a real token
+
+/** The consent gate with the user's agreement already given. */
+const AGREED: ConsentGate = { peek: () => true, has: () => Promise.resolve(true) };
 
 function request(over: Partial<RequestDetails> & { auth?: string | null } = {}): RequestDetails {
   const { auth = TOKEN, ...rest } = over;
@@ -84,7 +88,6 @@ describe('extractToken - who may provide a token', () => {
     'https://discord.com',
     'https://ptb.discord.com',
     'https://canary.discord.com',
-    'https://discordapp.com',
   ])('accepts requests initiated by %s', (initiator) => {
     expect(extractToken(request({ initiator }))).toBe(TOKEN);
   });
@@ -100,7 +103,8 @@ describe('extractToken - who may provide a token', () => {
     ['a lookalike suffix', 'https://evildiscord.com'],
     ['a lookalike subdomain', 'https://discord.com.evil.example'],
     ['a non-client Discord subdomain', 'https://support.discord.com'],
-    ['a non-client legacy subdomain', 'https://www.discordapp.com'],
+    ['the legacy discordapp.com (no longer observed)', 'https://discordapp.com'],
+    ['a legacy subdomain', 'https://www.discordapp.com'],
     ['a plain-http page', 'http://discord.com'],
     ['a custom port', 'https://discord.com:8443'],
     ['an opaque origin', 'null'],
@@ -146,15 +150,71 @@ describe('DISCORD_API_URL_PATTERNS', () => {
       'https://discord.com/api/*',
       'https://ptb.discord.com/api/*',
       'https://canary.discord.com/api/*',
-      'https://discordapp.com/api/*',
     ]);
+  });
+});
+
+describe('createTokenCapture - the consent gate', () => {
+  /** A request that counts every time its headers are read. */
+  const watched = (): { details: RequestDetails; reads: () => number } => {
+    let reads = 0;
+    const details: RequestDetails = {
+      initiator: 'https://discord.com',
+      tabId: 7,
+      get requestHeaders() {
+        reads += 1;
+        return [{ name: 'Authorization', value: TOKEN }];
+      },
+    };
+    return { details, reads: () => reads };
+  };
+
+  it('while the answer is known to be no: the consent is not even asked again, the headers are not read, nothing is queued', async () => {
+    const { storage, data } = fakeStorage();
+    const has = vi.fn(() => Promise.resolve(false));
+    const capture = createTokenCapture({ storage, now: () => 1, consent: { peek: () => false, has } });
+    const { details, reads } = watched();
+    await capture.handle(details);
+    expect(has).not.toHaveBeenCalled();
+    expect(reads()).toBe(0);
+    expect(data).toEqual({});
+    expect(storage.get).not.toHaveBeenCalled();
+  });
+
+  it('while the answer is not known yet: it is asked exactly once, the headers are read only after a yes, and a no stores nothing', async () => {
+    const { storage, data } = fakeStorage();
+    const has = vi.fn(() => Promise.resolve(false));
+    const capture = createTokenCapture({ storage, now: () => 1, consent: { peek: () => null, has } });
+    const { details, reads } = watched();
+    await capture.handle(details);
+    expect(has).toHaveBeenCalledTimes(1);
+    expect(reads()).toBe(0);
+    expect(data).toEqual({});
+    expect(storage.set).not.toHaveBeenCalled();
+
+    const agreed = createTokenCapture({ storage, now: () => 1, consent: { peek: () => null, has: () => Promise.resolve(true) } });
+    const second = watched();
+    await agreed.handle(second.details);
+    expect(second.reads()).toBeGreaterThan(0);
+    expect(data).toEqual({ [SESSION.token]: TOKEN, [SESSION.tokenCapturedAt]: 1 });
+  });
+
+  it('a token that came before the agreement is captured by the next request after it', async () => {
+    const { storage, data } = fakeStorage();
+    let agreed = false;
+    const capture = createTokenCapture({ storage, now: () => 5, consent: { peek: () => agreed, has: () => Promise.resolve(agreed) } });
+    await capture.handle(request());
+    expect(data).toEqual({});
+    agreed = true;
+    await capture.handle(request());
+    expect(data).toEqual({ [SESSION.token]: TOKEN, [SESSION.tokenCapturedAt]: 5 });
   });
 });
 
 describe('createTokenCapture', () => {
   it('stores a captured token together with its capture time', async () => {
     const { storage, data } = fakeStorage();
-    const capture = createTokenCapture({ storage, now: () => 1234 });
+    const capture = createTokenCapture({ storage, now: () => 1234, consent: AGREED });
     await capture.handle(request());
     expect(data).toEqual({ [SESSION.token]: TOKEN, [SESSION.tokenCapturedAt]: 1234 });
     expect(storage.set).toHaveBeenCalledTimes(1);
@@ -162,7 +222,7 @@ describe('createTokenCapture', () => {
 
   it('writes once for a burst of identical tokens (no write storm)', async () => {
     const { storage } = fakeStorage();
-    const capture = createTokenCapture({ storage, now: () => 1 });
+    const capture = createTokenCapture({ storage, now: () => 1, consent: AGREED });
     const pending = Array.from({ length: 200 }, () => capture.handle(request()));
     await Promise.all(pending);
     await capture.handle(request());
@@ -173,7 +233,7 @@ describe('createTokenCapture', () => {
   it('writes again when the token changes, and keeps the newest on top', async () => {
     const { storage, data } = fakeStorage();
     let clock = 0;
-    const capture = createTokenCapture({ storage, now: () => ++clock });
+    const capture = createTokenCapture({ storage, now: () => ++clock, consent: AGREED });
     await capture.handle(request({ auth: TOKEN }));
     await capture.handle(request({ auth: OTHER_TOKEN }));
     await capture.handle(request({ auth: OTHER_TOKEN }));
@@ -184,7 +244,7 @@ describe('createTokenCapture', () => {
 
   it('applies tokens in arrival order even when they arrive before the first write finishes', async () => {
     const { storage, data } = fakeStorage();
-    const capture = createTokenCapture({ storage, now: () => 1 });
+    const capture = createTokenCapture({ storage, now: () => 1, consent: AGREED });
     const done = [capture.handle(request({ auth: TOKEN })), capture.handle(request({ auth: OTHER_TOKEN }))];
     await Promise.all(done);
     expect(data[SESSION.token]).toBe(OTHER_TOKEN);
@@ -192,7 +252,7 @@ describe('createTokenCapture', () => {
 
   it('never writes for rejected requests', async () => {
     const { storage } = fakeStorage();
-    const capture = createTokenCapture({ storage, now: () => 1 });
+    const capture = createTokenCapture({ storage, now: () => 1, consent: AGREED });
     await capture.handle(request({ initiator: 'chrome-extension://own-extension-id' }));
     await capture.handle(request({ initiator: 'https://example.com' }));
     await capture.handle(request({ tabId: -1, initiator: undefined }));
@@ -207,14 +267,14 @@ describe('createTokenCapture', () => {
   describe('after a service-worker restart (empty memory)', () => {
     it('does not rewrite a token that is already stored', async () => {
       const { storage } = fakeStorage({ [SESSION.token]: TOKEN, [SESSION.tokenCapturedAt]: 5 });
-      const capture = createTokenCapture({ storage, now: () => 99 });
+      const capture = createTokenCapture({ storage, now: () => 99, consent: AGREED });
       await capture.handle(request());
       expect(storage.set).not.toHaveBeenCalled();
     });
 
     it('replaces a stale stored token with the new one', async () => {
       const { storage, data } = fakeStorage({ [SESSION.token]: OTHER_TOKEN, [SESSION.tokenCapturedAt]: 5 });
-      const capture = createTokenCapture({ storage, now: () => 99 });
+      const capture = createTokenCapture({ storage, now: () => 99, consent: AGREED });
       await capture.handle(request());
       expect(storage.set).toHaveBeenCalledTimes(1);
       expect(data).toEqual({ [SESSION.token]: TOKEN, [SESSION.tokenCapturedAt]: 99 });
@@ -225,7 +285,7 @@ describe('createTokenCapture', () => {
     it('does not throw or log, and retries on the next request', async () => {
       const { storage, data } = fakeStorage();
       storage.set.mockRejectedValueOnce(new Error(`quota exceeded while storing ${TOKEN}`));
-      const capture = createTokenCapture({ storage, now: () => 1 });
+      const capture = createTokenCapture({ storage, now: () => 1, consent: AGREED });
       await expect(capture.handle(request())).resolves.toBeUndefined();
       expect(data[SESSION.token]).toBeUndefined();
       await capture.handle(request());
@@ -237,7 +297,7 @@ describe('createTokenCapture', () => {
     it('survives a failing read', async () => {
       const { storage, data } = fakeStorage();
       storage.get.mockRejectedValueOnce(new Error('boom'));
-      const capture = createTokenCapture({ storage, now: () => 1 });
+      const capture = createTokenCapture({ storage, now: () => 1, consent: AGREED });
       await expect(capture.handle(request())).resolves.toBeUndefined();
       await capture.handle(request());
       expect(data[SESSION.token]).toBe(TOKEN);
@@ -247,7 +307,7 @@ describe('createTokenCapture', () => {
   describe('onStorageChanged', () => {
     it('captures the same token again after the app cleared it', async () => {
       const { storage, data } = fakeStorage();
-      const capture = createTokenCapture({ storage, now: () => 1 });
+      const capture = createTokenCapture({ storage, now: () => 1, consent: AGREED });
       await capture.handle(request());
       expect(storage.set).toHaveBeenCalledTimes(1);
 
@@ -260,7 +320,7 @@ describe('createTokenCapture', () => {
 
     it('ignores other areas, other keys and non-removals', async () => {
       const { storage } = fakeStorage();
-      const capture = createTokenCapture({ storage, now: () => 1 });
+      const capture = createTokenCapture({ storage, now: () => 1, consent: AGREED });
       await capture.handle(request());
 
       capture.onStorageChanged({ [SESSION.token]: { newValue: undefined } }, 'local');
@@ -273,7 +333,7 @@ describe('createTokenCapture', () => {
 
   it('never logs anything while capturing', async () => {
     const { storage } = fakeStorage();
-    const capture = createTokenCapture({ storage, now: () => 1 });
+    const capture = createTokenCapture({ storage, now: () => 1, consent: AGREED });
     await capture.handle(request());
     await capture.handle(request({ auth: OTHER_TOKEN }));
     await capture.handle(request({ initiator: 'https://example.com' }));
@@ -327,7 +387,7 @@ describe('clearTokenIfEqual (compare-and-clear)', () => {
   it('after the removal the same token is captured again (the storage change resets the dedupe filter)', async () => {
     const { storage, data } = fakeStorage();
     const withRemove = { ...storage, remove: async (keys: string[]) => void keys.forEach((key) => delete data[key]) };
-    const capture = createTokenCapture({ storage, now: () => 1 });
+    const capture = createTokenCapture({ storage, now: () => 1, consent: AGREED });
     await capture.handle(request());
     await clearTokenIfEqual(withRemove, TOKEN);
     capture.onStorageChanged({ [SESSION.token]: { newValue: undefined } }, 'session');

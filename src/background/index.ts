@@ -3,6 +3,7 @@
 // EVERY chrome event listener is registered here, synchronously, at the top level: Chrome only wakes a suspended worker
 // for listeners that exist when its script first runs. The logic lives in the modules next to this file:
 //   token.ts     capture of the Authorization value of Discord's own requests (v1 module) + compare-and-clear
+//   consent.ts   nothing is read from Discord before the user agreed (token, account, server lists)
 //   account.ts   whose token is it (GET users/@me)             queue.ts      the download list of the current account
 //   guild.ts     channels of a guild the account may read      status.ts     status/get and settings/patch
 //   router.ts    message routing and sender checks
@@ -13,6 +14,7 @@ import { SESSION } from '@/shared';
 import { onTokenChanged } from './account';
 import { affectsBadge, refreshBadge } from './badge';
 import { handleCommand } from './commands';
+import { hasConsent, onConsentStorageChanged, peekConsent } from './consent';
 import { startDevReload } from './devReload';
 import { onDownloadChanged } from './downloads';
 import { removeHealth } from './health';
@@ -27,20 +29,22 @@ if (__DEV__) {
   startDevReload();
 }
 
-const capture = createTokenCapture({ storage: chrome.storage.session, now: Date.now });
+const capture = createTokenCapture({ storage: chrome.storage.session, now: Date.now, consent: { peek: peekConsent, has: hasConsent } });
 
-// Read-only observation of the page's own API traffic: no 'blocking', the request is never touched.
-// 'extraHeaders' is required for Chrome to include headers such as Authorization in `requestHeaders`.
+// Read-only observation of the page's own API traffic: no 'blocking', the request is never touched. Without 'extraHeaders'
+// Chrome leaves out the headers it treats as sensitive (Cookie, Referer, ...): the Authorization header the page sets is
+// still there, and the cookies are never offered to this listener.
 chrome.webRequest.onBeforeSendHeaders.addListener(
   (details) => {
     void capture.handle(details);
     return undefined;
   },
   { urls: DISCORD_API_URL_PATTERNS, types: ['xmlhttprequest'] },
-  ['requestHeaders', 'extraHeaders'],
+  ['requestHeaders'],
 );
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
+  onConsentStorageChanged(changes, areaName); // agreeing opens the gate; withdrawing removes the authorization and the account
   capture.onStorageChanged(changes, areaName); // a token removed behind our back is captured again
   const token = changes[SESSION.token];
   if (areaName === 'session' && token !== undefined) onTokenChanged(token.newValue); // a new value: whose is it?

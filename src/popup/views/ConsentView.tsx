@@ -1,6 +1,6 @@
 import { useState, type ReactElement } from 'react';
 import { Button } from '@/ui/components/Button';
-import { Folder, ChatBubble, Info, Warning } from '@/ui/components/Icons';
+import { Folder, ChatBubble, Info, Key, Warning } from '@/ui/components/Icons';
 import { commonStrings } from '@/ui/i18n/common';
 import { useLocale, useStrings } from '@/ui/i18n/locale';
 import { formatDateTime } from '@/ui/format/time';
@@ -9,12 +9,13 @@ import { ViewHeader } from '../components/ViewHeader';
 import { usePopupStore } from '../context';
 import { consentStrings } from '../strings';
 
-/** The four points of the notice (docs/PLAN.md §2 #11): Discord's terms and the account risk, own chats only, data stays local, slow requests. */
+/** The five points of the notice (docs/PLAN.md §2 #11, 6th change): Discord's terms and the account risk, own chats only, the login token is read, files stay on this computer, slow requests. */
 function ConsentNotice(): ReactElement {
   const t = useStrings(consentStrings);
   const points = [
     { icon: <Warning />, title: t.tosTitle, body: t.tosBody, tone: 'warning' },
     { icon: <ChatBubble />, title: t.ownTitle, body: t.ownBody, tone: 'info' },
+    { icon: <Key />, title: t.tokenTitle, body: t.tokenBody, tone: 'info' },
     { icon: <Folder />, title: t.localTitle, body: t.localBody, tone: 'info' },
     { icon: <Info />, title: t.rateTitle, body: t.rateBody, tone: 'info' },
   ] as const;

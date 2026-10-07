@@ -212,9 +212,11 @@ export function seedGuildAccess(api: FakeDiscordApi, guildId = GUILD_ID): void {
 
 /**
  * Loads the worker (`src/background/index.ts`) as a fresh module against `fake`: every call starts with clean module state
- * (token capture, locks, throttles), exactly like a newly started service worker.
+ * (token capture, locks, throttles, the consent answer), exactly like a newly started service worker.
  */
-export async function bootWorker(fake: FakeBrowser): Promise<void> {
+export async function bootWorker(fake: FakeBrowser, options: { agreed?: boolean } = {}): Promise<void> {
+  // The user has agreed on the first-run screen, unless the test says otherwise (`agreed: false`) or seeded settings of its own.
+  if (options.agreed !== false && !fake.local.has(LOCAL.settings)) seedConsent(fake);
   vi.resetModules();
   vi.stubGlobal('chrome', fake.chrome);
   await import('@/background/index');

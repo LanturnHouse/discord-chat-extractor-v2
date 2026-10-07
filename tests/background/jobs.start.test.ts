@@ -58,6 +58,7 @@ const storedJob = () => fake.session.peek<JobState>(SESSION.job);
 describe('the checks, in order', () => {
   it('without consent: "no-consent", and nothing is created', async () => {
     seedQueue(fake, [queueItem()]);
+    fake.local.seed({ [LOCAL.settings]: { consentAt: null } });
     await expect(start()).resolves.toEqual({ ok: false, error: 'no-consent' });
     expect(fake.session.has(SESSION.job)).toBe(false);
     expect(fake.offscreen.createCalls).toBe(0);
@@ -97,7 +98,7 @@ describe('the checks, in order', () => {
   it('checks consent before account before busy before empty', async () => {
     const other = createFakeBrowser();
     installFakeDiscordApi();
-    await bootWorker(other);
+    await bootWorker(other, { agreed: false });
     const page = other.createPage();
     await expect(page.send({ to: 'bg', type: 'job/start', keys: 'all' })).resolves.toEqual({ ok: false, error: 'no-consent' });
     seedConsent(other);

@@ -18,11 +18,13 @@ describe('the first-run notice (docs/PLAN.md §2 #11, §7.2)', () => {
     expect(screen.getByText('디스코드 이용약관과 계정 위험')).toBeTruthy();
     expect(screen.getByText(/계정이 경고를 받거나 제한·정지될 수 있어요/)).toBeTruthy();
     expect(screen.getByText('내 대화의 개인 백업용으로만 쓰세요')).toBeTruthy();
-    expect(screen.getByText('데이터는 이 컴퓨터에만 있어요')).toBeTruthy();
+    expect(screen.getByText('로그인 토큰을 읽어요')).toBeTruthy();
+    expect(screen.getByText(/크롬을 끄면 사라져요/)).toBeTruthy();
+    expect(screen.getByText('채팅은 이 컴퓨터에 파일로 저장돼요')).toBeTruthy();
     expect(screen.getByText(/별도 서버로 보내거나 분석 도구를 쓰지 않아요/)).toBeTruthy();
     expect(screen.getByText('천천히, 조금씩 받아요')).toBeTruthy();
     expect(screen.getByRole('button', { name: '동의하고 시작' })).toBeTruthy();
-    expect(screen.getByText('동의하기 전에는 다운로드할 수 없어요.')).toBeTruthy();
+    expect(screen.getByText('동의하기 전에는 아무것도 읽거나 다운로드하지 않아요.')).toBeTruthy();
   });
 
   it('nothing else is reachable: no account header, no list, no download button, no settings', async () => {

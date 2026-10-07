@@ -178,6 +178,15 @@ export function Folder(props: IconProps): ReactElement {
   );
 }
 
+export function Key(props: IconProps): ReactElement {
+  return (
+    <Svg {...props}>
+      <circle cx="8" cy="15" r="4" />
+      <path d="M11 12l8.5-8.5M16 7l2.5 2.5M13.5 9.5 16 12" />
+    </Svg>
+  );
+}
+
 /* --- status ----------------------------------------------------------------------------------------------------- */
 
 export function Warning(props: IconProps): ReactElement {

@@ -9,6 +9,7 @@
  * filed under one account while a job would run with another one's authorization.
  */
 import type { AccountInfo } from '@/shared';
+import { hasConsent } from './consent';
 import { apiGet } from './discordApi';
 import { readAccount, readToken, writeAccount } from './store';
 import { clearTokenIfEqual } from './token';
@@ -72,6 +73,7 @@ async function applyIfCurrent(token: string, account: AccountInfo): Promise<void
 
 async function verifyOnce(): Promise<void> {
   lastAttemptAt = Date.now();
+  if (!(await hasConsent())) return; // nothing is asked of Discord before the user has agreed
   const token = await readToken();
   if (token === null) {
     await writeAccount(null, null);

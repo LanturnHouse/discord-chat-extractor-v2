@@ -138,10 +138,18 @@ describe('GroupInfoReporter: an account that shows up later', () => {
     expect(sent).toHaveLength(2);
   });
 
+  it('a worker answer of no-consent does too (nothing is read before the user has agreed; the account follows the agreement)', async () => {
+    const { reporter, sent, settle } = setup(() => ({ ok: false, error: 'no-consent' }));
+    reporter.seen('111', () => 'S');
+    await settle();
+    reporter.accountKnown();
+    reporter.seen('111', () => 'S');
+    expect(sent).toHaveLength(2);
+  });
+
   it('other answers do not', async () => {
     const answers: (() => BgResponse<unknown> | null)[] = [
       () => ({ ok: true, data: undefined }),
-      () => ({ ok: false, error: 'no-consent' }),
       () => null,
     ];
     for (const answer of answers) {
@@ -221,7 +229,6 @@ describe('GroupInfoReporter: a worker that answered no-account is asked again so
   it('each server has its own retries; other answers and failures get none', async () => {
     const answers: (() => BgResponse<unknown> | null | Promise<never>)[] = [
       () => ({ ok: true, data: undefined }),
-      () => ({ ok: false, error: 'no-consent' }),
       () => ({ ok: false, error: 'http' }),
       () => null,
       () => Promise.reject(new Error('boom')),

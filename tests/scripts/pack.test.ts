@@ -5,6 +5,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { PackError, packDist } from '../../scripts/pack.mjs';
 import { createDistFixture, type DistFixture } from './distFixture';
 
+/** The archive name for the fixture's version: the same version the pack script reads, so a version bump cannot break the test. */
+const zipNameOf = (fixture: DistFixture): string => `discord-chat-extractor-v2-${(JSON.parse(readFileSync(join(fixture.root, 'package.json'), 'utf8')) as { version: string }).version}.zip`;
+
 let fixture: DistFixture | undefined;
 afterEach(() => {
   fixture?.cleanup();
@@ -15,7 +18,8 @@ describe('packDist', () => {
   it('zips the CONTENTS of dist/ (manifest.json at the zip root) into discord-chat-extractor-v2-<version>.zip', () => {
     fixture = createDistFixture('production');
     const { zipPath, fileCount, bytes } = packDist({ rootDir: fixture.root });
-    expect(zipPath).toBe(join(fixture.root, 'discord-chat-extractor-v2-2.0.0.zip'));
+    expect(zipPath).toBe(join(fixture.root, zipNameOf(fixture)));
+    expect(zipNameOf(fixture)).toMatch(/^discord-chat-extractor-v2-\d+\.\d+\.\d+\.zip$/);
     expect(bytes).toBeGreaterThan(0);
 
     const entries = unzipSync(new Uint8Array(readFileSync(zipPath)));
@@ -42,14 +46,14 @@ describe('packDist', () => {
     fixture = createDistFixture('development');
     expect(() => packDist({ rootDir: fixture!.root })).toThrow(PackError);
     expect(() => packDist({ rootDir: fixture!.root })).toThrow(/development build/);
-    expect(existsSync(join(fixture.root, 'discord-chat-extractor-v2-2.0.0.zip'))).toBe(false);
+    expect(existsSync(join(fixture.root, zipNameOf(fixture)))).toBe(false);
   });
 
   it('refuses a dist/ that fails verification and lists why', () => {
     fixture = createDistFixture('production');
     fixture.remove('content.js');
     expect(() => packDist({ rootDir: fixture!.root })).toThrow(/FAIL content\.js is missing[\s\S]*not packing/);
-    expect(existsSync(join(fixture.root, 'discord-chat-extractor-v2-2.0.0.zip'))).toBe(false);
+    expect(existsSync(join(fixture.root, zipNameOf(fixture)))).toBe(false);
   });
 
   it('refuses when there is no dist/', () => {

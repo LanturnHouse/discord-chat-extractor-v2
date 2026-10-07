@@ -4,7 +4,9 @@
  * server header), and `queue/groupInfo` when a server comes into view; the popup sends `upsert` / `remove` / `removeMany` /
  * `clear` and, for the gear on a server or category row, `setGroupSettings` (5th change: group settings in
  * `LOCAL.groupSettings(accountId)` that the channels below follow, item > category > server > common). Every incoming object is
- * validated strictly (validate.ts); with no verified account every operation answers `{ ok: false, error: 'no-account' }`.
+ * validated strictly (validate.ts); with no verified account every operation answers `{ ok: false, error: 'no-account' }`, and
+ * the actions of the content script's buttons (`toggle`, `addCategory`, `addGuild`, `groupInfo`) answer `'no-consent'` until the
+ * user has agreed on the first-run screen (consent.ts).
  *
  * Group settings never outlive the last queued channel of their group: every write that takes an item out of the list
  * (`remove`, `removeMany`, `clear`, a toggle, a category or server button that removes, a finished item: store.ts) prunes them
@@ -17,6 +19,7 @@
  */
 import { belongsToGroup, categoryIdOf, pruneGroupSettings } from '@/shared';
 import type { AccountInfo, BgResponse, ExportSettings, QueueItem } from '@/shared';
+import { hasConsent } from './consent';
 import type { GuildChannel } from './guild';
 import { loadGuildWithGroups } from './groups';
 import { fail, invalid, ok } from './response';
@@ -24,6 +27,11 @@ import { mutateQueue, mutateQueueState, readAccount, readToken } from './store';
 import { isNumericId } from './util';
 import { MAX_NAME_LENGTH, cleanText, validateGroupSettingsRequest, validateKeyList, validateQueueItem, validateTarget } from './validate';
 import type { Checked } from './validate';
+
+/** Before the user has agreed nothing is read from Discord and no list is touched: the answer for every action of the buttons. */
+async function needsConsent(): Promise<BgResponse<never> | null> {
+  return (await hasConsent()) ? null : fail('no-consent');
+}
 
 /** What a category or server click did. Exactly one of `removed` and `added` is above zero, unless the group was empty. */
 export interface GroupToggleResult {
@@ -39,6 +47,8 @@ export interface GroupToggleResult {
 export async function toggleQueue(rawTarget: unknown): Promise<BgResponse<{ queued: boolean }>> {
   const target = validateTarget(rawTarget);
   if (!target.ok) return invalid(target.message);
+  const noConsent = await needsConsent();
+  if (noConsent !== null) return noConsent;
   const account = await readAccount();
   if (account === null) return fail('no-account');
 
@@ -140,6 +150,8 @@ export async function addCategory(raw: Record<string, unknown>): Promise<BgRespo
   const categoryLabel = cleanText(categoryName, MAX_NAME_LENGTH);
   if (categoryLabel === null) return invalid('categoryName must be at most 100 characters');
 
+  const noConsent = await needsConsent();
+  if (noConsent !== null) return noConsent;
   const session = await readSession();
   if (session === null) return fail('no-account');
 
@@ -161,6 +173,8 @@ export async function addGuild(raw: Record<string, unknown>): Promise<BgResponse
   const guild = validateGuildRef(raw);
   if (!guild.ok) return invalid(guild.message);
 
+  const noConsent = await needsConsent();
+  if (noConsent !== null) return noConsent;
   const session = await readSession();
   if (session === null) return fail('no-account');
 
@@ -179,6 +193,8 @@ export async function groupInfo(raw: Record<string, unknown>): Promise<BgRespons
   const guild = validateGuildRef(raw);
   if (!guild.ok) return invalid(guild.message);
 
+  const noConsent = await needsConsent();
+  if (noConsent !== null) return noConsent;
   const session = await readSession();
   if (session === null) return fail('no-account');
 

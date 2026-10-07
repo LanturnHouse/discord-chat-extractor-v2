@@ -12,7 +12,7 @@ let popup: FakePage;
 beforeEach(async () => {
   fake = createFakeBrowser();
   installFakeDiscordApi();
-  await bootWorker(fake);
+  await bootWorker(fake, { agreed: false });
   popup = fake.createPage({ kind: 'popup' });
 });
 

@@ -2,7 +2,7 @@
 
 > 이 문서가 V2의 단일 기준이다. **§5 계약은 메인 에이전트(Opus)만 바꾼다.** 구현 에이전트는 계약 변경이 필요하면 직접 고치지 말고 보고서에 "계약 변경 제안"으로 남긴다.
 > v1 원본: https://github.com/LanturnHouse/discord-chat-extractor (V2 코어 이식의 참고용. V2 저장소에서는 수정하지 않는다)
-> 변경 이력: 2026-10-06 1차 승인 → 2차 변경(설정 모달 제거, 공통 설정 + 항목별 ⚙, 버튼 토글, 기본 포맷 HTML) → 3차(서버 헤더 버튼) → 4차(행 버튼 항상 표시·맨 오른쪽, 카테고리·서버 버튼 토글+체크 표시, 팝업 브랜드 버튼 글자색) → 5차(팝업 목록을 서버›카테고리›채널 트리로, 서버·카테고리 설정, 한 줄 압축).
+> 변경 이력: 2026-10-06 1차 승인 → 2차 변경(설정 모달 제거, 공통 설정 + 항목별 ⚙, 버튼 토글, 기본 포맷 HTML) → 3차(서버 헤더 버튼) → 4차(행 버튼 항상 표시·맨 오른쪽, 카테고리·서버 버튼 토글+체크 표시, 팝업 브랜드 버튼 글자색) → 5차(팝업 목록을 서버›카테고리›채널 트리로, 서버·카테고리 설정, 한 줄 압축) → 6차(개인정보 강화: 동의 전에는 토큰·계정·서버 정보를 읽지 않음, 동의 화면에 토큰 안내, `discordapp.com`·탭 주소 저장·`extraHeaders` 제거, CSP 좁힘).
 
 ## 1. 목표
 
@@ -51,7 +51,7 @@
 - 그룹 정보: 콘텐츠가 `queue/groupInfo` → bg가 같은 데이터(60초 캐시)로 서버 전체·카테고리별 볼 수 있는 채널 목록을 `LOCAL.groups(계정)`에 기록(그 서버의 기존 그룹 항목은 교체).
 - 다운로드: 팝업 `job/start` → bg가 각 항목의 유효 설정(`resolveEffectiveSettings`: 항목 개별 > 카테고리 > 서버 > 공통, §5.4)을 확정해 오프스크린 생성 → `engine/run` → 엔진이 v1 API 클라이언트로 디스코드 API를 직접 호출(v1과 동일, host_permissions) → 파일 생성 → `engine/saveBlob` → bg가 `chrome.downloads.download` → 완료 후 `engine/revoke`.
 - 디스코드 탭은 로그인 상태 확인에만 필요하다. 다운로드 중에 탭을 닫아도 작업은 계속된다.
-- 인증 처리는 v1의 토큰 모듈(`src/background/token.ts`)과 저장 방식(`chrome.storage.session`)을 그대로 쓴다. 인증 값은 bg와 엔진 메모리에만 있고 콘텐츠·팝업은 모른다.
+- 인증 처리는 v1의 토큰 모듈(`src/background/token.ts`)과 저장 방식(`chrome.storage.session`)을 그대로 쓴다. 인증 값은 bg와 엔진 메모리에만 있고 콘텐츠·팝업은 모른다. (6차) **동의 문(`src/background/consent.ts`)**: 사용자가 첫 실행 화면에서 동의(`settings.consentAt`)하기 전에는 bg가 디스코드에서 아무것도 읽지 않는다 — webRequest 리스너는 헤더를 열어 보지도 않고(`peekConsent() === false`), 계정 확인(`users/@me`)·서버 채널 조회(`queue/groupInfo`·`addGuild`·`addCategory`)·`queue/toggle`은 `no-consent`로 답한다. 동의 여부는 서비스 워커 메모리에 두고 `chrome.storage.onChanged`로 갱신한다. 동의하면 디스코드 페이지의 다음 요청에서 토큰이 다시 잡힌다. 동의가 철회되면(`consentAt` → null) 토큰·계정을 즉시 지운다.
 
 ## 4. 디스코드 DOM (2026-10-06 실측: 한국어 UI, `html.theme-dark.theme-midnight.visual-refresh`)
 
@@ -420,7 +420,7 @@ export type FromOffscreen =
 - 표시 토글 꺼짐: 주입한 노드 전부 제거, 옵저버 해제.
 - 단축키(#15) `add-current-chat`(기본 `Alt+Shift+D`): bg → `shortcut/toggleCurrent` → 보고 있는 채팅을 토글 + 토스트.
 7.2 팝업 (폭 380px, 최대 높이 600px)
-- 첫 실행(#11): 약관·위험 안내 화면 → [동의하고 시작]. 동의 전에는 다운로드 불가.
+- 첫 실행(#11): 약관·위험 안내 화면(다섯 가지: 이용약관과 계정 위험 / 내 대화의 개인 백업용 / **로그인 토큰을 읽어요**(6차) / 채팅은 이 컴퓨터에 파일로 저장돼요 / 천천히 조금씩) → [동의하고 시작]. 동의 전에는 아무것도 읽거나 다운로드하지 않는다(6차, 동의 문).
 - 헤더: 아바타·표시 이름·@아이디, 우측 [기록] [설정] 아이콘.
 - 배너: 디스코드 탭 없음(#4, [디스코드 열기]) / 계정 확인 중 / 로그인 만료(디스코드 새로고침 안내) / 주입 실패(디스코드 업데이트로 버튼을 못 붙임).
 - 토글: "디스코드에 버튼 표시".
@@ -464,6 +464,7 @@ export type FromOffscreen =
 - 인증 값은 `storage.session`(bg)과 엔진 메모리에만. 로그·에러 메시지·`storage.local`·파일에 절대 남기지 않는다(v1 redaction 유지).
 - 엔진의 API 클라이언트는 허용 목록 경로만 호출(`TRANSPORT_ALLOWLIST` = HTTP 전송 계층 허용 목록): `^/api/v9/(users/@me|users/@me/guilds/\d+/member|channels/\d+(/messages|/threads/search|/threads/archived/public)?|guilds/\d+(/channels|/roles|/members/@me)?|attachments/refresh-urls)(\?.*)?$`, 메서드는 GET (POST는 `attachments/refresh-urls`만). bg의 직접 GET(`API_GET_ALLOWLIST`)은 `users/@me`, `channels/\d+`, `guilds/\d+`, `guilds/\d+/channels`, `guilds/\d+/roles`, `users/@me/guilds/\d+/member`, `guilds/\d+/members/@me`만.
 - 메시지 발신자 검사: bg는 `sender.id === chrome.runtime.id`, 콘텐츠 발신은 `sender.url`이 디스코드 출처이고 `sender.tab`이 있는지 확인. 콘텐츠가 보낼 수 있는 메시지는 `queue/toggle`, `queue/addCategory`, `queue/addGuild`, `queue/groupInfo`, `inject/health`뿐.
+- (6차) `InjectHealth`는 `ok`·`reason`·`checkedAt`만 담는다(탭 주소는 저장하지 않음). webRequest 리스너는 `extraHeaders` 없이 `['requestHeaders']`만 지정해 쿠키 같은 민감 헤더는 받지 않는다. `https://discordapp.com/*`는 감시·호스트 권한에서 뺐다(웹 클라이언트는 `discord.com/api`만 쓴다).
 - 원격 코드·분석·외부 전송 없음. 모든 라이브러리 로컬 번들. 클라이언트 헤더 위조 안 함(v1 원칙 유지).
 
 ## 9. 빌드·구조·개발 루프
@@ -482,7 +483,7 @@ scripts/           generate-icons, verify-dist, pack, dev-server
 ```
 - 스택: v1과 동일(Vite 8 + Rolldown, TypeScript 7 strict, React 19, zustand 5, fflate 0.8, Vitest 5 + jsdom). 새 런타임 의존성은 메인 에이전트 승인 없이 추가 금지.
 - 출력: `dist/` = `manifest.json`, `background.js`(ES module 1파일), `content.js`(IIFE 1파일, CSS 인라인), `popup.html`, `offscreen.html` + 해시 자산, `icons/`, `_locales/{ko,en}`.
-- 매니페스트: MV3, `default_locale: "ko"`, `minimum_chrome_version: "120"`, permissions `storage, webRequest, downloads, offscreen, notifications`, host_permissions `https://discord.com/*, https://ptb.discord.com/*, https://canary.discord.com/*, https://discordapp.com/*, https://cdn.discordapp.com/*, https://media.discordapp.net/*`(+dev: `http://localhost:5858/*`), content_scripts(디스코드 3개 출처, `document_idle`, top frame), `action.default_popup`, `commands.add-current-chat`(Alt+Shift+D), CSP `script-src 'self'; object-src 'self'` + `img-src 'self' data: blob: https://cdn.discordapp.com https://media.discordapp.net` + `connect-src 'self' https://discord.com https://*.discord.com https://cdn.discordapp.com https://media.discordapp.net`(+dev localhost). `web_accessible_resources` 없음.
+- 매니페스트: MV3, `default_locale: "ko"`, `minimum_chrome_version: "120"`, permissions `storage, webRequest, downloads, offscreen, notifications`, host_permissions `https://discord.com/*, https://ptb.discord.com/*, https://canary.discord.com/*, https://cdn.discordapp.com/*, https://media.discordapp.net/*`(+dev: `http://localhost:5858/*`), content_scripts(디스코드 3개 출처, `document_idle`, top frame), `action.default_popup`, `commands.add-current-chat`(Alt+Shift+D), CSP `script-src 'self'; object-src 'self'` + `img-src 'self' data: blob: https://cdn.discordapp.com https://media.discordapp.net` + `connect-src 'self' https://discord.com https://cdn.discordapp.com https://media.discordapp.net`(+dev localhost). `web_accessible_resources` 없음.
 - 개발 루프: `npm run dev` = 감시 빌드 + `scripts/dev-server.mjs`(포트 5858, `GET /build-id`). dev-server는 빌드 파일이 모두 있고 1.5초 조용해질 때까지 503. dev 빌드의 bg는 새 build-id가 2.5초 간격으로 두 번 연속 200일 때만, 그리고 직전 새로고침 후 20초가 지났을 때만(그 전 변경은 하나로 합침) 열린 디스코드 탭 ID를 `storage.local`에 적고 `chrome.runtime.reload()` → 재시작 시 그 탭들을 새로고침. prod 빌드에는 포함되지 않는다.
 
 ## 10. 테스트
@@ -508,5 +509,6 @@ scripts/           generate-icons, verify-dist, pack, dev-server
 | P3 | 통합·빌드·테스트 정리 | 메인 + Sonnet | 전부 |
 | P4 | 실계정 QA(지정한 서버·DM만) + 수정 | 메인 + Sonnet | P3, 사용자의 압축해제 로드 1회 |
 | P5 | README·패키징 | Sonnet | P4 |
+| 6차 | 개인정보 강화(메인 직접): 동의 문 `consent.ts`, 동의 화면 토큰 안내, `InjectHealth.url`·`discordapp.com`·`extraHeaders` 제거, CSP 좁힘, 버전 2.0.1 | 메인 | P5 |
 
 P1b·A1·B·C는 병렬(각자 git worktree). 디렉터리 소유: P1b=`src/lib, tests/lib`, A1=`src/background, src/offscreen, tests/background, tests/offscreen`, B=`src/content, tests/content`, C=`src/ui, src/popup, tests/ui, tests/popup`. 공유 파일(`src/shared`, `package.json`, `vite.config.ts`, `src/manifest.ts`, `scripts`, `public`, `docs`)은 메인(또는 메인이 지시한 P1a′)만 수정.

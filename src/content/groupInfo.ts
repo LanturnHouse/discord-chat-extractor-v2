@@ -30,7 +30,7 @@ interface Sent {
   at: number;
   /** The worker could not use it for lack of an account: report again when one shows up. */
   needsAccount: boolean;
-  /** The worker answered `no-account`: worth another try soon (until `retries` is used up). */
+  /** The worker answered `no-account` or `no-consent`: worth another try soon (until `retries` is used up). */
   retryable: boolean;
   /** How many short retries this 5-minute window has had. */
   retries: number;
@@ -59,7 +59,7 @@ export class GroupInfoReporter {
     void this.deps
       .send({ to: 'bg', type: 'queue/groupInfo', guildId, guildName: guildName() })
       .then((response) => {
-        if (response && !response.ok && response.error === 'no-account') {
+        if (response && !response.ok && (response.error === 'no-account' || response.error === 'no-consent')) {
           entry.needsAccount = true;
           entry.retryable = true;
           this.armRetry(guildId, entry);

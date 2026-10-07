@@ -1,20 +1,20 @@
 import { SESSION } from '@/shared';
 
-// Ported from v1 (src/background/token.ts) as it was: the capture logic is unchanged, only the storage keys come from the
-// V2 contract (`SESSION.token`, `SESSION.tokenCapturedAt`). The one addition is `clearTokenIfEqual` at the bottom.
+// Ported from v1 (src/background/token.ts); the storage keys come from the V2 contract (`SESSION.token`,
+// `SESSION.tokenCapturedAt`). Added in V2: `clearTokenIfEqual` at the bottom, and the consent gate (`TokenCaptureDeps.consent`:
+// before the user has agreed nothing is looked at, 6th change).
 
-/** webRequest filter: the REST API of every Discord web client flavour (stable, ptb, canary, legacy domain). */
+/** webRequest filter: the REST API of every Discord web client flavour (stable, ptb, canary). */
 export const DISCORD_API_URL_PATTERNS = [
   'https://discord.com/api/*',
   'https://ptb.discord.com/api/*',
   'https://canary.discord.com/api/*',
-  'https://discordapp.com/api/*',
 ];
 
 const MIN_TOKEN_LENGTH = 20;
 const MAX_TOKEN_LENGTH = 300;
 /** Exact hosts of the web client. Other subdomains (support., status., ...) never carry the user's API token. */
-const DISCORD_WEB_HOSTS = new Set(['discord.com', 'ptb.discord.com', 'canary.discord.com', 'discordapp.com']);
+const DISCORD_WEB_HOSTS = new Set(['discord.com', 'ptb.discord.com', 'canary.discord.com']);
 
 /** The slice of `chrome.webRequest.OnBeforeSendHeadersDetails` that capturing needs. */
 export interface RequestDetails {
@@ -30,9 +30,18 @@ export interface SessionStorageLike {
   set(items: Record<string, unknown>): Promise<void>;
 }
 
+/** The consent gate (consent.ts). */
+export interface ConsentGate {
+  /** The answer if it is known without reading storage, else null. */
+  peek(): boolean | null;
+  has(): Promise<boolean>;
+}
+
 export interface TokenCaptureDeps {
   storage: SessionStorageLike;
   now: () => number;
+  /** Nothing is looked at, let alone stored, until this says yes. */
+  consent: ConsentGate;
 }
 
 export interface TokenCapture {
@@ -42,7 +51,7 @@ export interface TokenCapture {
   onStorageChanged(changes: Record<string, { newValue?: unknown }>, areaName: string): void;
 }
 
-/** True only for the web client origins: discord.com, ptb., canary. and the legacy discordapp.com. */
+/** True only for the web client origins: discord.com, ptb. and canary. */
 function isDiscordOrigin(origin: string | undefined): boolean {
   if (!origin) return false;
   let url: URL;
@@ -82,7 +91,7 @@ export function extractToken(details: RequestDetails): string | null {
  * `storage.session`, which is consulted before every write - a freshly restarted worker therefore never rewrites an
  * unchanged token. Nothing here may log: the token is a credential.
  */
-export function createTokenCapture({ storage, now }: TokenCaptureDeps): TokenCapture {
+export function createTokenCapture({ storage, now, consent }: TokenCaptureDeps): TokenCapture {
   /** Last token seen (and therefore queued/persisted by us). */
   let known: string | null = null;
   let queue: Promise<void> = Promise.resolve();
@@ -95,15 +104,23 @@ export function createTokenCapture({ storage, now }: TokenCaptureDeps): TokenCap
 
   return {
     handle(details) {
-      const token = extractToken(details);
-      if (token === null || token === known) return queue;
-      known = token;
-      // Serialised so an older token can never overwrite a newer one.
-      queue = queue.then(() => persist(token)).catch(() => {
-        // Storage failures are not actionable here (and error objects must not be logged near credentials).
-        // Forgetting the token makes the next request retry the write.
-        if (known === token) known = null;
-      });
+      if (consent.peek() === false) return queue; // not agreed yet: the request's headers are not even looked at
+      // Serialised so an older token can never overwrite a newer one. The header is read only once the consent is known.
+      queue = queue
+        .then(async () => {
+          if (!(await consent.has())) return;
+          const token = extractToken(details);
+          if (token === null || token === known) return;
+          known = token;
+          try {
+            await persist(token);
+          } catch {
+            // Storage failures are not actionable here (and error objects must not be logged near credentials).
+            // Forgetting the token makes the next request retry the write.
+            if (known === token) known = null;
+          }
+        })
+        .catch(() => undefined);
       return queue;
     },
 
