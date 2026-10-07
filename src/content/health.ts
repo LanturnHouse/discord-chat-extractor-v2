@@ -14,8 +14,6 @@ import type { PassStats } from './inject/injector';
 export interface HealthDeps {
   send(health: InjectHealth): void;
   now(): number;
-  /** The address to report (origin + path, no query). */
-  url(): string;
   /** Does the page show at least one of our buttons right now? */
   hasButtons(): boolean;
   /** Are Discord's chat rows (that we could decorate) on the page right now? */
@@ -72,7 +70,7 @@ export class HealthReporter {
     // The same state for the same cause is not news, whatever the row counts in the reason say now.
     if (last && last.ok === ok && causeOf(last.reason) === causeOf(reason) && now - last.at < TIMING.healthRepeatMs) return;
     this.last = { ok, reason, at: now };
-    this.deps.send({ ok, reason, checkedAt: now, url: this.deps.url() });
+    this.deps.send({ ok, reason, checkedAt: now });
   }
 }
 

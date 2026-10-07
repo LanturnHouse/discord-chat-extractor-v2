@@ -10,7 +10,7 @@ const DISCORD_MATCHES = ['https://discord.com/*', 'https://ptb.discord.com/*', '
 const PROD_CSP =
   "script-src 'self'; object-src 'self'; " +
   "img-src 'self' data: blob: https://cdn.discordapp.com https://media.discordapp.net; " +
-  "connect-src 'self' https://discord.com https://*.discord.com https://cdn.discordapp.com https://media.discordapp.net";
+  "connect-src 'self' https://discord.com https://cdn.discordapp.com https://media.discordapp.net";
 const ICONS = {
   16: 'icons/icon16.png',
   32: 'icons/icon32.png',
@@ -40,7 +40,6 @@ describe('buildManifest("production") is the manifest of docs/PLAN.md §9', () =
         'https://discord.com/*',
         'https://ptb.discord.com/*',
         'https://canary.discord.com/*',
-        'https://discordapp.com/*',
         'https://cdn.discordapp.com/*',
         'https://media.discordapp.net/*',
       ],

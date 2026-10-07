@@ -142,7 +142,7 @@ describe('polling status/get (docs/PLAN.md §7.2: on open and every 2 seconds)',
     await flush();
     expect(store.getState().discordTabs).toBe(1);
     platform.setDiscordTabs(3);
-    platform.setHealth({ ok: false, reason: 'changed', checkedAt: 5, url: 'u' });
+    platform.setHealth({ ok: false, reason: 'changed', checkedAt: 5 });
     await vi.advanceTimersByTimeAsync(2000);
     expect(store.getState().discordTabs).toBe(3);
     expect(store.getState().health).toMatchObject({ ok: false, reason: 'changed' });

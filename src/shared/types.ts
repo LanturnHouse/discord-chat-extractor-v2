@@ -112,7 +112,7 @@ export interface HistoryEntry {
   error: string | null;
 }
 
-export interface InjectHealth { ok: boolean; reason: string | null; checkedAt: number; url: string }
+export interface InjectHealth { ok: boolean; reason: string | null; checkedAt: number }
 
 /** 유효 설정이 어디서 왔는지 (5차): 항목 개별 > 카테고리 > 서버 > 공통 */
 export type SettingsSource = 'item' | 'category' | 'guild' | 'common';

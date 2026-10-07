@@ -27,13 +27,13 @@ const reports = (): { ok: boolean; reason: string | null }[] =>
   ctx!.chrome.sentOf('inject/health').map((m) => ({ ok: m.health.ok, reason: m.health.reason }));
 
 describe('in the running content script', () => {
-  it('ok: true once the first button is in, with the address (no query) and a timestamp', async () => {
+  it('ok: true once the first button is in, with a timestamp and no page address', async () => {
     ctx = await boot({ html: sidebar(channelRow({ id: ID.general, name: 'general' })) });
     const [message] = ctx.chrome.sentOf('inject/health');
     expect(message).toEqual({
       to: 'bg',
       type: 'inject/health',
-      health: { ok: true, reason: null, checkedAt: expect.any(Number), url: 'http://localhost:3000/channels/100000000000000001/200000000000000001' },
+      health: { ok: true, reason: null, checkedAt: expect.any(Number) },
     });
     expect(ctx.chrome.sentOf('inject/health')).toHaveLength(1);
   });
@@ -63,7 +63,7 @@ describe('in the running content script', () => {
     expect(reports()).toEqual([{ ok: false, reason: 'no-icon-container (2 of 2 rows)' }]);
     const [message] = ctx.chrome.sentOf('inject/health');
     expect(message!.health.checkedAt).toEqual(expect.any(Number));
-    expect(message!.health.url).toBe('http://localhost:3000/channels/100000000000000001/200000000000000001');
+    expect(Object.keys(message!.health).sort()).toEqual(['checkedAt', 'ok', 'reason']);
   });
 
   it('says ok: true again as soon as injection works (Discord shows the container later)', async () => {
@@ -198,7 +198,6 @@ describe('HealthReporter (unit)', () => {
     const reporter = new HealthReporter({
       send: (health) => sent.push(health),
       now: () => Date.now(),
-      url: () => 'https://discord.com/channels/@me',
       hasButtons: () => state.buttons,
       hasRows: () => state.rows,
     });
@@ -209,7 +208,7 @@ describe('HealthReporter (unit)', () => {
     const { reporter, sent } = setup();
     reporter.onPass(stats(3, 0, 0, 3));
     vi.advanceTimersByTime(10_001);
-    expect(sent).toEqual([{ ok: false, reason: 'inject-error (3 of 3 rows)', checkedAt: expect.any(Number), url: 'https://discord.com/channels/@me' }]);
+    expect(sent).toEqual([{ ok: false, reason: 'inject-error (3 of 3 rows)', checkedAt: expect.any(Number) }]);
   });
 
   it('a success before the deadline cancels the pending failure', () => {

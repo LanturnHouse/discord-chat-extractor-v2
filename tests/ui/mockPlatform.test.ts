@@ -346,7 +346,7 @@ describe('platform extras', () => {
   it('setDiscordTabs and setHealth change what status/get reports', async () => {
     const platform = createMockPlatform();
     platform.setDiscordTabs(3);
-    platform.setHealth({ ok: false, reason: 'r', checkedAt: 5, url: 'u' });
+    platform.setHealth({ ok: false, reason: 'r', checkedAt: 5 });
     expect(await status(platform)).toMatchObject({ discordTabs: 3, health: { ok: false, reason: 'r' } });
     platform.setHealth(null);
     expect((await status(platform)).health).toBeNull();

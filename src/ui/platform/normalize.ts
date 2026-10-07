@@ -261,7 +261,7 @@ export function normalizeAccount(raw: unknown): AccountInfo | null {
 
 export function normalizeHealth(raw: unknown): InjectHealth | null {
   if (!isRecord(raw) || typeof raw.ok !== 'boolean') return null;
-  return { ok: raw.ok, reason: asNullableString(raw.reason), checkedAt: asFiniteNumber(raw.checkedAt, 0), url: asString(raw.url, '') };
+  return { ok: raw.ok, reason: asNullableString(raw.reason), checkedAt: asFiniteNumber(raw.checkedAt, 0) };
 }
 
 /** The most recent report of `dce.injectHealth` (`Record<tabId, InjectHealth>`). */

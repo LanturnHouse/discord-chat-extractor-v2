@@ -23,7 +23,7 @@ const ICONS = {
 };
 
 function contentSecurityPolicy(mode: BuildMode): string {
-  const connect = ["'self'", 'https://discord.com', 'https://*.discord.com', 'https://cdn.discordapp.com', 'https://media.discordapp.net'];
+  const connect = ["'self'", 'https://discord.com', 'https://cdn.discordapp.com', 'https://media.discordapp.net'];
   if (mode === 'development') connect.push(DEV_SERVER_ORIGIN);
   return [
     "script-src 'self'",
@@ -40,7 +40,6 @@ function contentSecurityPolicy(mode: BuildMode): string {
 export function buildManifest(mode: BuildMode): chrome.runtime.ManifestV3 {
   const hostPermissions = [
     ...DISCORD_MATCHES,
-    'https://discordapp.com/*',
     'https://cdn.discordapp.com/*',
     'https://media.discordapp.net/*',
   ];

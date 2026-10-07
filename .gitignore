@@ -11,3 +11,4 @@ coverage/
 .e2e/out/
 .claude/
 *.mp4
+docs/store/

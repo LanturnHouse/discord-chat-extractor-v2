@@ -201,12 +201,12 @@ describe('accounts, health, theme, status', () => {
   });
 
   it('normalizeHealth and latestHealth (the most recent report of all tabs)', () => {
-    expect(normalizeHealth({ ok: false, reason: 'x', checkedAt: 5, url: 'u' })).toEqual({ ok: false, reason: 'x', checkedAt: 5, url: 'u' });
+    expect(normalizeHealth({ ok: false, reason: 'x', checkedAt: 5, url: 'u' })).toEqual({ ok: false, reason: 'x', checkedAt: 5 });
     expect(normalizeHealth({ reason: 'x' })).toBeNull();
     expect(
       latestHealth({
-        '1': { ok: true, reason: null, checkedAt: 10, url: 'a' },
-        '2': { ok: false, reason: 'broken', checkedAt: 20, url: 'b' },
+        '1': { ok: true, reason: null, checkedAt: 10 },
+        '2': { ok: false, reason: 'broken', checkedAt: 20 },
         '3': 'junk',
       }),
     ).toMatchObject({ ok: false, reason: 'broken', checkedAt: 20 });

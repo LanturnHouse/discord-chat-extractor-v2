@@ -11,25 +11,13 @@ import { queryDiscordTabs } from './tabs';
 import { isRecord } from './util';
 
 const MAX_REASON_LENGTH = 200;
-const MAX_URL_LENGTH = 300;
 const MAX_TABS = 50;
 
 type HealthMap = Record<string, InjectHealth>;
 
-/** Origin + path only: a query string or fragment of a Discord URL can carry things nobody needs to store. */
-function cleanUrl(value: unknown): string | null {
-  if (typeof value !== 'string' || value.length > 2048) return null;
-  try {
-    const url = new URL(value);
-    return `${url.origin}${url.pathname}`.slice(0, MAX_URL_LENGTH);
-  } catch {
-    return null;
-  }
-}
-
-function parseHealth(raw: unknown, fallbackUrl: string | undefined): InjectHealth | null {
+function parseHealth(raw: unknown): InjectHealth | null {
   if (!isRecord(raw)) return null;
-  const { ok: healthy, reason, checkedAt, url } = raw;
+  const { ok: healthy, reason, checkedAt } = raw;
   if (typeof healthy !== 'boolean') return null;
   if (reason !== null && typeof reason !== 'string') return null;
   if (typeof checkedAt !== 'number' || !Number.isFinite(checkedAt)) return null;
@@ -37,7 +25,6 @@ function parseHealth(raw: unknown, fallbackUrl: string | undefined): InjectHealt
     ok: healthy,
     reason: reason === null ? null : reason.slice(0, MAX_REASON_LENGTH),
     checkedAt,
-    url: cleanUrl(url) ?? cleanUrl(fallbackUrl) ?? '',
   };
 }
 
@@ -46,7 +33,7 @@ function parseHealthMap(raw: unknown): HealthMap {
   if (!isRecord(raw)) return map;
   for (const [tabId, value] of Object.entries(raw)) {
     if (!/^\d+$/.test(tabId)) continue;
-    const health = parseHealth(value, undefined);
+    const health = parseHealth(value);
     if (health !== null) map[tabId] = health;
   }
   return map;
@@ -70,7 +57,7 @@ export function latestHealth(map: HealthMap, openTabIds?: ReadonlySet<number>): 
 export async function recordHealth(raw: unknown, sender: chrome.runtime.MessageSender): Promise<BgResponse> {
   const tabId = sender.tab?.id;
   if (typeof tabId !== 'number' || !Number.isInteger(tabId) || tabId < 0) return fail('invalid', 'inject/health must come from a tab');
-  const health = parseHealth(raw, sender.url);
+  const health = parseHealth(raw);
   if (health === null) return invalid('health is malformed');
 
   const openIds = new Set((await queryDiscordTabs()).flatMap((tab) => (tab.id === undefined ? [] : [tab.id])));

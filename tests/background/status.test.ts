@@ -19,7 +19,7 @@ afterEach(() => {
 });
 
 const status = async () => ((await popup.send({ to: 'bg', type: 'status/get' })) as { ok: true; data: Record<string, unknown> }).data;
-const health = (overrides: Partial<InjectHealth> = {}): InjectHealth => ({ ok: true, reason: null, checkedAt: 1000, url: 'https://discord.com/channels/@me', ...overrides });
+const health = (overrides: Partial<InjectHealth> = {}): InjectHealth => ({ ok: true, reason: null, checkedAt: 1000, ...overrides });
 const reportHealth = (page: FakePage, value: unknown) => page.send({ to: 'bg', type: 'inject/health', health: value });
 
 describe('status/get', () => {
@@ -136,18 +136,12 @@ describe('inject/health', () => {
     expect(kept).not.toContain('100'); // the oldest report went
   });
 
-  it('cuts the reason and keeps only origin and path of the URL (no query string, no fragment)', async () => {
+  it('cuts the reason and stores no page address (6th change: nothing but ok, reason and time)', async () => {
     const content = fake.createContentScript(7, 'https://discord.com/channels/1/2?x=1#y');
-    await reportHealth(content, health({ reason: 'r'.repeat(500), url: 'https://discord.com/channels/1/2?token=abc&x=1#frag' }));
+    await reportHealth(content, { ...health({ reason: 'r'.repeat(500) }), url: 'https://discord.com/channels/1/2?token=abc&x=1#frag' });
     const stored = (fake.session.peek(SESSION.injectHealth) as Record<string, InjectHealth>)['7'];
     expect(stored.reason).toHaveLength(200);
-    expect(stored.url).toBe('https://discord.com/channels/1/2');
-  });
-
-  it('falls back to the sender\'s URL when the report has none', async () => {
-    const content = fake.createContentScript(7, 'https://discord.com/channels/9/8?z=1');
-    await reportHealth(content, { ok: true, reason: null, checkedAt: 5 });
-    expect((fake.session.peek(SESSION.injectHealth) as Record<string, InjectHealth>)['7'].url).toBe('https://discord.com/channels/9/8');
+    expect(Object.keys(stored).sort()).toEqual(['checkedAt', 'ok', 'reason']);
   });
 
   it.each([

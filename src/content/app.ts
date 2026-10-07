@@ -91,7 +91,6 @@ export function createApp(options: AppOptions = {}): ContentApp {
       postToBackground({ to: 'bg', type: 'inject/health', health: report });
     },
     now: () => Date.now(),
-    url: () => `${location.origin}${location.pathname}`,
     hasButtons: () => injector.hasButtons(),
     hasRows: () => hasSidebarRows(doc),
   });

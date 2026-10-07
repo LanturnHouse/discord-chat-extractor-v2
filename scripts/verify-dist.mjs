@@ -17,7 +17,7 @@ const PAGES = ['popup.html', 'offscreen.html'];
 const REMOVED_PAGES = ['modal.html'];
 
 const DISCORD_MATCHES = ['https://discord.com/*', 'https://ptb.discord.com/*', 'https://canary.discord.com/*'];
-const ALLOWED_HOST_PERMISSIONS = [...DISCORD_MATCHES, 'https://discordapp.com/*', 'https://cdn.discordapp.com/*', 'https://media.discordapp.net/*'];
+const ALLOWED_HOST_PERMISSIONS = [...DISCORD_MATCHES, 'https://cdn.discordapp.com/*', 'https://media.discordapp.net/*'];
 const ALLOWED_PERMISSIONS = ['storage', 'webRequest', 'downloads', 'offscreen', 'notifications'];
 const DEV_HOST = 'http://localhost:5858/*';
 const DEV_CONNECT = 'http://localhost:5858';
@@ -28,7 +28,7 @@ const CSP_REMOTE_SOURCES = {
   'script-src': [],
   'object-src': [],
   'img-src': ['https://cdn.discordapp.com', 'https://media.discordapp.net'],
-  'connect-src': ['https://discord.com', 'https://*.discord.com', 'https://cdn.discordapp.com', 'https://media.discordapp.net'],
+  'connect-src': ['https://discord.com', 'https://cdn.discordapp.com', 'https://media.discordapp.net'],
 };
 
 const isRemote = (url) => /^(?:https?:)?\/\//i.test(url);

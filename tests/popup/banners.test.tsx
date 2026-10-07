@@ -89,7 +89,7 @@ describe('banners (docs/PLAN.md §7.2)', () => {
   it('the page warning needs a Discord tab: without one, only the "open Discord" banner shows', async () => {
     await renderPopup({
       scenario: 'no-discord',
-      prepare: (platform) => platform.setHealth({ ok: false, reason: 'stale', checkedAt: 1, url: 'u' }),
+      prepare: (platform) => platform.setHealth({ ok: false, reason: 'stale', checkedAt: 1 }),
     });
     expect(screen.queryByText(/버튼을 붙이지 못했어요/)).toBeNull();
     expect(screen.getByRole('button', { name: '디스코드 열기' })).toBeTruthy();

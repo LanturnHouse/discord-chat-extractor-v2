@@ -242,7 +242,7 @@ export interface MockInitialState {
 export function buildScenario(scenario: MockScenario, now: number): MockInitialState {
   const account = MOCK_ACCOUNT.id;
   const consented = sampleSettings({ consentAt: now - 86_400_000 });
-  const healthy: InjectHealth = { ok: true, reason: null, checkedAt: now - 2_000, url: 'https://discord.com/channels/@me' };
+  const healthy: InjectHealth = { ok: true, reason: null, checkedAt: now - 2_000 };
   const base: MockInitialState = {
     local: {
       [LOCAL.settings]: consented,
@@ -292,7 +292,7 @@ export function buildScenario(scenario: MockScenario, now: number): MockInitialS
       base.health = null;
       break;
     case 'unhealthy':
-      base.health = { ok: false, reason: 'channel list not found', checkedAt: now - 1_000, url: 'https://discord.com/channels/@me' };
+      base.health = { ok: false, reason: 'channel list not found', checkedAt: now - 1_000 };
       break;
   }
   return base;
