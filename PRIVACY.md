@@ -58,7 +58,7 @@
 - 내보낸 **HTML 파일**을 열면 브라우저가 프로필 사진·이미지를 디스코드 서버 주소에서 불러와요(첨부파일을 함께 저장했다면 그 첨부는 컴퓨터에서 열려요). HTML 파일에는 스크립트가 들어 있지 않아요.
 - 크롬 웹 스토어와 GitHub(소스 코드 사이트)는 이 확장 프로그램을 내려받는 곳일 뿐이에요. 확장 프로그램이 실행되면서 그곳으로 정보를 보내지 않아요.
 
-## 5. 동의하기 전에는 아무것도 읽지 않아요
+## 5. 동의하기 전에는 토큰·계정·서버 정보를 읽지 않아요
 
 확장 프로그램을 처음 열면 이용약관과 위험, 그리고 **로그인 토큰을 읽는다는 사실**을 알리는 안내 화면이 나와요. [동의하고 시작]을 누르기 **전에는** 아래 일을 **하지 않아요.**
 
@@ -193,7 +193,7 @@ A Chrome extension that **saves the chat history of the channels and DMs you pic
 - When you open an exported **HTML file**, your browser loads avatars and images from Discord's servers (attachments you chose to save open from your computer). The HTML file contains no scripts.
 - The Chrome Web Store and GitHub are only places to download the extension. The running extension sends nothing to them.
 
-## 5. Before you agree, nothing is read
+## 5. Before you agree, no token, account or server information is read
 
 When you first open the extension, a notice about the Terms of Service, the risks and **the fact that it reads your login token** appears. **Before** you click the agree button, it does **none** of the following:
 

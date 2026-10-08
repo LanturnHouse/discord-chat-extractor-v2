@@ -1,6 +1,6 @@
 {
   "name": "discord-chat-extractor-v2",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Chrome MV3 extension: add Discord channels and DMs to a download list from the web client and export them to TXT / HTML / Markdown / Excel / CSV / JSON.",
   "license": "MIT",
   "homepage": "https://github.com/LanturnHouse/discord-chat-extractor-v2#readme",

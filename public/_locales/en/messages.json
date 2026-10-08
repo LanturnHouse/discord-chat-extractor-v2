@@ -4,7 +4,7 @@
     "description": "Extension name (toolbar tooltip, chrome://extensions, Web Store)."
   },
   "extDescription": {
-    "message": "Pick channels and DMs on Discord web, then download their chat history as TXT, HTML, Markdown, Excel, CSV or JSON in one go.",
+    "message": "Add Discord web channels and DMs to a list with one button, then save their chats as files on your computer. Unofficial tool.",
     "description": "Extension description (max 132 characters)."
   },
   "cmdAddCurrent": {

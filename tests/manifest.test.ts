@@ -132,6 +132,13 @@ describe('_locales', () => {
       expect(messages.extDescription!.message.length).toBeLessThanOrEqual(132);
     }
   });
+
+  it('the summary is a sentence, not a keyword list: it never enumerates the file formats (Chrome Web Store spam and metadata policy, "Yellow Argon" rejection of 2.0.1)', () => {
+    for (const messages of [ko, en]) {
+      const formats = new Set(messages.extDescription!.message.match(/(TXT|HTML|Markdown|Excel|CSV|JSON)/gi)?.map((name) => name.toLowerCase()));
+      expect(formats.size).toBeLessThanOrEqual(1);
+    }
+  });
 });
 
 describe('icons', () => {

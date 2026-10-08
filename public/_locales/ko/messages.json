@@ -4,7 +4,7 @@
     "description": "Extension name (toolbar tooltip, chrome://extensions, Web Store)."
   },
   "extDescription": {
-    "message": "디스코드 웹에서 채널과 DM의 채팅을 목록에 담아 TXT, HTML, Markdown, Excel, CSV, JSON 파일로 한 번에 내려받습니다.",
+    "message": "디스코드 웹의 채널·DM 옆 버튼으로 채팅을 목록에 담고, 한 번에 파일로 저장합니다. 개인 기록 보관용 비공식 도구입니다.",
     "description": "Extension description (max 132 characters)."
   },
   "cmdAddCurrent": {

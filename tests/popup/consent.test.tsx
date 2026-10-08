@@ -24,7 +24,7 @@ describe('the first-run notice (docs/PLAN.md §2 #11, §7.2)', () => {
     expect(screen.getByText(/별도 서버로 보내거나 분석 도구를 쓰지 않아요/)).toBeTruthy();
     expect(screen.getByText('천천히, 조금씩 받아요')).toBeTruthy();
     expect(screen.getByRole('button', { name: '동의하고 시작' })).toBeTruthy();
-    expect(screen.getByText('동의하기 전에는 아무것도 읽거나 다운로드하지 않아요.')).toBeTruthy();
+    expect(screen.getByText('동의하기 전에는 로그인 토큰을 읽거나 디스코드에 요청을 보내지 않아요.')).toBeTruthy();
   });
 
   it('nothing else is reachable: no account header, no list, no download button, no settings', async () => {
