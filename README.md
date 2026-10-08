@@ -17,6 +17,11 @@
   </tr>
 </table>
 
+
+## 크롬 스토어 링크
+https://chrome.google.com/u/4/webstore/devconsole/de3fbb67-d320-4ba4-8999-730cec6f747e/fpdfddohljhndbjgdeceonmmlbglnnln/analytics/installs
+
+
 ### ▶ 사용 방법 영상 (약 2분)
 
 설치부터 담기, 설정, 다운로드까지 한 번에 보여 주는 영상이에요. 자막을 따라가며 보세요. 고화질 MP4는 [릴리스 페이지](https://github.com/LanturnHouse/discord-chat-extractor-v2/releases/latest)의 Assets에서 `discord-chat-extractor-v2-usage.mp4`를 받으세요.
